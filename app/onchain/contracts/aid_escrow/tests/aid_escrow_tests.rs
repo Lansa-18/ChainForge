@@ -5,7 +5,7 @@ use soroban_sdk::{
     symbol_short,
     testutils::{Address as _, Ledger, LedgerInfo},
     token::{Client as TokenClient, StellarAssetClient},
-    Address, Env, Map, Vec,
+    Address, Bytes, Env, Map, Symbol, Vec,
 };
 
 // ---------------------------------------------------------------------------
@@ -206,6 +206,27 @@ mod create_package {
 mod claim {
     use super::*;
 
+    fn claimant_leaf_hex(env: &Env, claimant: &Address) -> std::string::String {
+        let addr = claimant.to_string();
+        let len = addr.len() as usize;
+        let mut raw = [0u8; 96];
+        addr.copy_into_slice(&mut raw[..len]);
+
+        let mut data = Bytes::new(env);
+        for b in raw[..len].iter() {
+            data.push_back(*b);
+        }
+
+        let digest = env.crypto().sha256(&data);
+        let hash = digest.to_array();
+
+        let mut out = std::string::String::with_capacity(64);
+        for b in hash {
+            out.push_str(&format!("{:02x}", b));
+        }
+        out
+    }
+
     #[test]
     fn succeeds_when_recipient_claims_within_window() {
         let t = TestSetup::new();
@@ -227,6 +248,146 @@ mod claim {
         t.advance_time(3601);
         let result = t.client.try_claim(&id);
         assert_eq!(result, Err(Ok(Error::PackageExpired)));
+    }
+
+    #[test]
+    fn fails_when_claimed_too_early() {
+        let t = TestSetup::new();
+        let recipient = Address::generate(&t.env);
+        t.fund_contract(ONE_TOKEN);
+        let expires_at = t.now() + 3600;
+        let mut metadata = Map::new(&t.env);
+        // claim_starts_at = now + 1000
+        metadata.set(
+            Symbol::new(&t.env, "claim_starts_at"),
+            soroban_sdk::String::from_str(&t.env, &(t.now() + 1000).to_string()),
+        );
+        let id = t.client.create_package(
+            &t.admin,
+            &99u64,
+            &recipient,
+            &ONE_TOKEN,
+            &t.token,
+            &expires_at,
+            &metadata,
+        );
+        // Try to claim before claim_starts_at
+        let result = t.client.try_claim(&id);
+        assert_eq!(result, Err(Ok(Error::ClaimTooEarly)));
+        // Advance to claim_starts_at
+        t.advance_time(1000);
+        let result2 = t.client.try_claim(&id);
+        assert!(result2.is_ok());
+    }
+
+    #[test]
+    fn succeeds_when_claimed_at_exact_expiry_boundary() {
+        let t = TestSetup::new();
+        let recipient = Address::generate(&t.env);
+        t.fund_contract(ONE_TOKEN);
+        let now = t.now();
+        let expires_at = now + 1000;
+        let mut metadata = Map::new(&t.env);
+        // claim_starts_at = expires_at
+        metadata.set(
+            Symbol::new(&t.env, "claim_starts_at"),
+            soroban_sdk::String::from_str(&t.env, &expires_at.to_string()),
+        );
+        let id = t.client.create_package(
+            &t.admin,
+            &100u64,
+            &recipient,
+            &ONE_TOKEN,
+            &t.token,
+            &expires_at,
+            &metadata,
+        );
+        // Try to claim before claim_starts_at
+        let result = t.client.try_claim(&id);
+        assert_eq!(result, Err(Ok(Error::ClaimTooEarly)));
+        // Advance to claim_starts_at (== expires_at)
+        t.advance_time(1000);
+        let result2 = t.client.try_claim(&id);
+        // Should succeed (allowed to claim at expiry boundary)
+        assert!(result2.is_ok());
+    }
+
+    #[test]
+    fn default_claim_starts_at_is_created_at() {
+        let t = TestSetup::new();
+        let recipient = Address::generate(&t.env);
+        let id = t.create_default_package(&recipient, ONE_TOKEN);
+        // Should be claimable immediately
+        let result = t.client.try_claim(&id);
+        assert!(result.is_ok());
+    }
+
+    #[test]
+    fn merkle_allowlist_claim_succeeds_with_valid_proof() {
+        let t = TestSetup::new();
+        let claimant = Address::generate(&t.env);
+        t.fund_contract(ONE_TOKEN);
+
+        // Single-leaf tree: root == leaf and proof is empty.
+        let root_hex = claimant_leaf_hex(&t.env, &claimant);
+
+        let mut metadata = Map::new(&t.env);
+        metadata.set(
+            Symbol::new(&t.env, "merkle_root"),
+            soroban_sdk::String::from_str(&t.env, &root_hex),
+        );
+
+        let id = t.client.create_package(
+            &t.admin,
+            &777u64,
+            &Address::generate(&t.env),
+            &ONE_TOKEN,
+            &t.token,
+            &(t.now() + 3600),
+            &metadata,
+        );
+
+        // Direct claim path should reject Merkle-protected package.
+        let direct = t.client.try_claim(&id);
+        assert_eq!(direct, Err(Ok(Error::InvalidProof)));
+
+        let proof: Vec<soroban_sdk::String> = Vec::new(&t.env);
+        let with_proof = t.client.try_claim_with_proof(&id, &claimant, &proof);
+        assert!(with_proof.is_ok());
+
+        let token_client = TokenClient::new(&t.env, &t.token);
+        assert_eq!(token_client.balance(&claimant), ONE_TOKEN);
+    }
+
+    #[test]
+    fn merkle_allowlist_claim_fails_with_invalid_proof() {
+        let t = TestSetup::new();
+        let claimant = Address::generate(&t.env);
+        t.fund_contract(ONE_TOKEN);
+
+        // Root for a different address.
+        let wrong_addr = Address::generate(&t.env);
+        let wrong_root_hex = claimant_leaf_hex(&t.env, &wrong_addr);
+
+        let mut metadata = Map::new(&t.env);
+        metadata.set(
+            Symbol::new(&t.env, "merkle_root"),
+            soroban_sdk::String::from_str(&t.env, &wrong_root_hex),
+        );
+
+        let id = t.client.create_package(
+            &t.admin,
+            &778u64,
+            &Address::generate(&t.env),
+            &ONE_TOKEN,
+            &t.token,
+            &(t.now() + 3600),
+            &metadata,
+        );
+
+        let proof: Vec<soroban_sdk::String> = Vec::new(&t.env);
+        let with_proof = t.client.try_claim_with_proof(&id, &claimant, &proof);
+        assert_eq!(with_proof, Err(Ok(Error::InvalidProof)));
     }
 }
 

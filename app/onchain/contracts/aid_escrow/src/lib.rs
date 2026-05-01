@@ -22,7 +22,7 @@
 
 use soroban_sdk::{
     contract, contracterror, contractevent, contractimpl, contracttype, symbol_short, token,
-    Address, Env, Map, String, Symbol, Vec,
+    Address, Bytes, Env, Map, String, Symbol, Vec,
 };
 
 // --- Storage Keys ---
@@ -38,6 +38,7 @@ const KEY_PAUSE_CREATE: Symbol = symbol_short!("p_create");
 const KEY_PAUSE_CLAIM: Symbol = symbol_short!("p_claim");
 const KEY_PAUSE_WITHDRAW: Symbol = symbol_short!("p_wdrw");
 const KEY_TOTAL_CLAIMED: Symbol = symbol_short!("claimed"); // Map<Address, i128>
+const META_MERKLE_ROOT_KEY: &str = "merkle_root";
 
 // --- Data Types ---
 
@@ -62,6 +63,7 @@ pub struct Package {
     pub status: PackageStatus,
     pub created_at: u64,
     pub expires_at: u64,
+    pub claim_starts_at: u64,
     pub metadata: Map<Symbol, String>,
 }
 
@@ -99,6 +101,8 @@ pub enum Error {
     MismatchedArrays = 12,
     InsufficientSurplus = 13,
     ContractPaused = 14,
+    ClaimTooEarly = 15,
+    InvalidProof = 16,
 }
 
 // --- Contract Events (indexer-friendly; stable topics & payloads) ---
@@ -113,7 +117,6 @@ pub struct EscrowFunded {
     pub timestamp: u64,
 }
 
-/// Emitted when a package is created. Actor = operator (admin or distributor).
 #[contractevent]
 pub struct PackageCreated {
     pub package_id: u64,
@@ -123,7 +126,6 @@ pub struct PackageCreated {
     pub timestamp: u64,
 }
 
-/// Emitted when a recipient claims a package. Actor = recipient.
 #[contractevent]
 pub struct PackageClaimed {
     pub package_id: u64,
@@ -133,7 +135,6 @@ pub struct PackageClaimed {
     pub timestamp: u64,
 }
 
-/// Emitted when admin disburses a package. Actor = admin.
 #[contractevent]
 pub struct PackageDisbursed {
     pub package_id: u64,
@@ -143,7 +144,6 @@ pub struct PackageDisbursed {
     pub timestamp: u64,
 }
 
-/// Emitted when a package is revoked/cancelled. Actor = admin.
 #[contractevent]
 pub struct PackageRevoked {
     pub package_id: u64,
@@ -153,7 +153,6 @@ pub struct PackageRevoked {
     pub timestamp: u64,
 }
 
-/// Emitted when funds are refunded to admin after expire/cancel. Actor = admin.
 #[contractevent]
 pub struct PackageRefunded {
     pub package_id: u64,
@@ -554,6 +553,12 @@ impl AidEscrow {
         env.storage().instance().set(&KEY_TOTAL_LOCKED, &locked_map);
 
         let created_at = env.ledger().timestamp();
+        let claim_starts_at = Self::resolve_claim_starts_at(&env, &metadata, created_at)?;
+
+        if claim_starts_at < created_at || (expires_at > 0 && claim_starts_at > expires_at) {
+            return Err(Error::InvalidState);
+        }
+
         let package = Package {
             id,
             recipient: recipient.clone(),
@@ -562,6 +567,7 @@ impl AidEscrow {
             status: PackageStatus::Created,
             created_at,
             expires_at,
+            claim_starts_at,
             metadata,
         };
 
@@ -642,6 +648,11 @@ impl AidEscrow {
             let recipient = recipients.get(i).unwrap();
             let amount = amounts.get(i).unwrap();
             let metadata = metadatas.get(i).unwrap();
+            let claim_starts_at = Self::resolve_claim_starts_at(&env, &metadata, created_at)?;
+
+            if claim_starts_at > expires_at {
+                return Err(Error::InvalidState);
+            }
 
             // Validate amount
             if amount <= 0 {
@@ -668,6 +679,7 @@ impl AidEscrow {
                 status: PackageStatus::Created,
                 created_at,
                 expires_at,
+                claim_starts_at,
                 metadata: metadata.clone(),
             };
 
@@ -727,51 +739,82 @@ impl AidEscrow {
             return Err(Error::PackageNotActive);
         }
 
-        if package.expires_at > 0 && env.ledger().timestamp() > package.expires_at {
+        let now = env.ledger().timestamp();
+        if now < package.claim_starts_at {
+            return Err(Error::ClaimTooEarly);
+        }
+
+        if package.expires_at > 0 && now > package.expires_at {
             package.status = PackageStatus::Expired;
             env.storage().persistent().set(&key, &package);
             return Err(Error::PackageExpired);
         }
 
-        package.recipient.require_auth();
-
-        // State Transition
-        package.status = PackageStatus::Claimed;
-        env.storage().persistent().set(&key, &package);
-
-        // Update Global Locked (Bookkeeping)
-        Self::decrement_locked(&env, &package.token, package.amount);
-
-        // --- ADDED FOR INVARIANT TRACKING ---
-        let mut claimed_map: Map<Address, i128> = env
-            .storage()
-            .instance()
-            .get(&KEY_TOTAL_CLAIMED)
-            .unwrap_or(Map::new(&env));
-        let current_total = claimed_map.get(package.token.clone()).unwrap_or(0);
-        claimed_map.set(package.token.clone(), current_total + package.amount);
-        env.storage()
-            .instance()
-            .set(&KEY_TOTAL_CLAIMED, &claimed_map);
-        // ------------------------------------
-
-        let token_client = token::Client::new(&env, &package.token);
-        token_client.transfer(
-            &env.current_contract_address(),
-            &package.recipient,
-            &package.amount,
-        );
-
-        PackageClaimed {
-            package_id: id,
-            recipient: package.recipient.clone(),
-            amount: package.amount,
-            actor: package.recipient.clone(),
-            timestamp: env.ledger().timestamp(),
+        // Packages configured with a Merkle allowlist must be claimed through
+        // claim_with_proof so eligibility can be verified.
+        if Self::merkle_root_from_metadata(&env, &package.metadata).is_some() {
+            return Err(Error::InvalidProof);
         }
-        .publish(&env);
 
-        Ok(())
+        package.recipient.require_auth();
+        let payout_recipient = package.recipient.clone();
+
+        Self::finalize_claim(&env, &key, &mut package, id, &payout_recipient, now)
+    }
+
+    /// Claim a package guarded by an optional Merkle allowlist.
+    ///
+    /// If package metadata includes `merkle_root` (hex-encoded 32-byte value),
+    /// `proof` must contain sibling hashes (hex-encoded 32-byte values) that
+    /// validate the claimant leaf `sha256(claimant_address_string)`.
+    ///
+    /// For non-Merkle packages this still works as a direct claim when
+    /// `claimant` equals the stored recipient.
+    pub fn claim_with_proof(
+        env: Env,
+        id: u64,
+        claimant: Address,
+        proof: Vec<String>,
+    ) -> Result<(), Error> {
+        Self::check_action_paused(&env, symbol_short!("claim"))?;
+        let key = (symbol_short!("pkg"), id);
+        let mut package: Package = env
+            .storage()
+            .persistent()
+            .get(&key)
+            .ok_or(Error::PackageNotFound)?;
+
+        if package.status != PackageStatus::Created {
+            return Err(Error::PackageNotActive);
+        }
+
+        let now = env.ledger().timestamp();
+        if now < package.claim_starts_at {
+            return Err(Error::ClaimTooEarly);
+        }
+
+        if package.expires_at > 0 && now > package.expires_at {
+            package.status = PackageStatus::Expired;
+            env.storage().persistent().set(&key, &package);
+            return Err(Error::PackageExpired);
+        }
+
+        claimant.require_auth();
+
+        match Self::merkle_root_from_metadata(&env, &package.metadata) {
+            Some(root) => {
+                if !Self::verify_merkle_proof_for_claimant(&env, &claimant, &proof, root) {
+                    return Err(Error::InvalidProof);
+                }
+                Self::finalize_claim(&env, &key, &mut package, id, &claimant, now)
+            }
+            None => {
+                if claimant != package.recipient {
+                    return Err(Error::NotAuthorized);
+                }
+                Self::finalize_claim(&env, &key, &mut package, id, &claimant, now)
+            }
+        }
     }
 
     // --- Admin Actions ---
@@ -1121,6 +1164,181 @@ impl AidEscrow {
 
         locked_map.set(token.clone(), new_locked);
         env.storage().instance().set(&KEY_TOTAL_LOCKED, &locked_map);
+    }
+
+    fn resolve_claim_starts_at(
+        env: &Env,
+        metadata: &Map<Symbol, String>,
+        created_at: u64,
+    ) -> Result<u64, Error> {
+        let key = Symbol::new(env, "claim_starts_at");
+        match metadata.get(key) {
+            Some(raw) => Self::parse_u64(raw).ok_or(Error::InvalidState),
+            None => Ok(created_at),
+        }
+    }
+
+    fn parse_u64(value: String) -> Option<u64> {
+        let len = value.len() as usize;
+        if len == 0 || len > 20 {
+            return None;
+        }
+
+        let mut bytes = [0u8; 20];
+        value.copy_into_slice(&mut bytes[..len]);
+
+        let mut out: u64 = 0;
+        for b in bytes[..len].iter() {
+            if !b.is_ascii_digit() {
+                return None;
+            }
+            out = out.checked_mul(10)?.checked_add((b - b'0') as u64)?;
+        }
+
+        Some(out)
+    }
+
+    fn finalize_claim(
+        env: &Env,
+        key: &(Symbol, u64),
+        package: &mut Package,
+        package_id: u64,
+        payout_recipient: &Address,
+        now: u64,
+    ) -> Result<(), Error> {
+        // State Transition
+        package.status = PackageStatus::Claimed;
+        env.storage().persistent().set(key, package);
+
+        // Update Global Locked (Bookkeeping)
+        Self::decrement_locked(env, &package.token, package.amount);
+
+        let mut claimed_map: Map<Address, i128> = env
+            .storage()
+            .instance()
+            .get(&KEY_TOTAL_CLAIMED)
+            .unwrap_or(Map::new(env));
+        let current_total = claimed_map.get(package.token.clone()).unwrap_or(0);
+        claimed_map.set(package.token.clone(), current_total + package.amount);
+        env.storage()
+            .instance()
+            .set(&KEY_TOTAL_CLAIMED, &claimed_map);
+
+        let token_client = token::Client::new(env, &package.token);
+        token_client.transfer(
+            &env.current_contract_address(),
+            payout_recipient,
+            &package.amount,
+        );
+
+        PackageClaimed {
+            package_id,
+            recipient: payout_recipient.clone(),
+            amount: package.amount,
+            actor: payout_recipient.clone(),
+            timestamp: now,
+        }
+        .publish(env);
+
+        Ok(())
+    }
+
+    fn merkle_root_from_metadata(env: &Env, metadata: &Map<Symbol, String>) -> Option<[u8; 32]> {
+        let root_key = Symbol::new(env, META_MERKLE_ROOT_KEY);
+        metadata
+            .get(root_key)
+            .and_then(|hex| Self::parse_hex_32(&hex))
+    }
+
+    fn verify_merkle_proof_for_claimant(
+        env: &Env,
+        claimant: &Address,
+        proof: &Vec<String>,
+        expected_root: [u8; 32],
+    ) -> bool {
+        let mut current = Self::hash_address(env, claimant);
+
+        for i in 0..proof.len() {
+            let sibling_hex = match proof.get(i) {
+                Some(v) => v,
+                None => return false,
+            };
+
+            let sibling = match Self::parse_hex_32(&sibling_hex) {
+                Some(v) => v,
+                None => return false,
+            };
+
+            current = if current <= sibling {
+                Self::hash_pair(env, &current, &sibling)
+            } else {
+                Self::hash_pair(env, &sibling, &current)
+            };
+        }
+
+        current == expected_root
+    }
+
+    fn hash_address(env: &Env, address: &Address) -> [u8; 32] {
+        let addr = address.to_string();
+        let len = addr.len() as usize;
+        let mut raw = [0u8; 96];
+        addr.copy_into_slice(&mut raw[..len]);
+
+        let mut data = Bytes::new(env);
+        for b in raw[..len].iter() {
+            data.push_back(*b);
+        }
+
+        let digest = env.crypto().sha256(&data);
+        Self::hash_to_array(&digest)
+    }
+
+    fn hash_pair(env: &Env, left: &[u8; 32], right: &[u8; 32]) -> [u8; 32] {
+        let mut data = Bytes::new(env);
+        for b in left.iter() {
+            data.push_back(*b);
+        }
+        for b in right.iter() {
+            data.push_back(*b);
+        }
+
+        let digest = env.crypto().sha256(&data);
+        Self::hash_to_array(&digest)
+    }
+
+    fn hash_to_array(value: &soroban_sdk::crypto::Hash<32>) -> [u8; 32] {
+        value.to_array()
+    }
+
+    fn parse_hex_32(value: &String) -> Option<[u8; 32]> {
+        let len = value.len() as usize;
+        if len != 64 {
+            return None;
+        }
+
+        let mut raw = [0u8; 64];
+        value.copy_into_slice(&mut raw);
+
+        let mut out = [0u8; 32];
+        let mut i = 0usize;
+        while i < 32 {
+            let hi = Self::hex_nibble(raw[i * 2])?;
+            let lo = Self::hex_nibble(raw[i * 2 + 1])?;
+            out[i] = (hi << 4) | lo;
+            i += 1;
+        }
+
+        Some(out)
+    }
+
+    fn hex_nibble(b: u8) -> Option<u8> {
+        match b {
+            b'0'..=b'9' => Some(b - b'0'),
+            b'a'..=b'f' => Some(10 + (b - b'a')),
+            b'A'..=b'F' => Some(10 + (b - b'A')),
+            _ => None,
+        }
     }
 
     /// Returns the total amount currently locked for a specific token.
