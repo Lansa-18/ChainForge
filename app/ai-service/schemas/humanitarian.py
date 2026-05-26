@@ -8,6 +8,7 @@ class HumanitarianVerificationRequest(BaseModel):
     supporting_evidence: List[str] = Field(default_factory=list)
     context_factors: Dict[str, Any] = Field(default_factory=dict)
     provider_preference: Literal["auto", "test", "openai", "groq"] = "auto"
+    timeout: Optional[float] = Field(default=None, description="Request-level timeout in seconds for provider call")
 
 
 class HumanitarianVerificationResponse(BaseModel):
