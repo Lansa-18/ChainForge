@@ -17,7 +17,7 @@ interface MisconfiguredPageProps {
  */
 export function MisconfiguredPage({ missing, invalid }: MisconfiguredPageProps) {
   const hints = [
-    'Set NEXT_PUBLIC_API_URL to the full backend URL (e.g. https://api.soter.app)',
+    'Set NEXT_PUBLIC_API_URL to the full backend URL (e.g. https://api.chainforge.app)',
     'Set NEXT_PUBLIC_STELLAR_NETWORK to one of: testnet, mainnet, futurenet, standalone',
     'On Vercel: add the variables under Project → Settings → Environment Variables',
     'After updating variables, trigger a new deployment for changes to take effect',

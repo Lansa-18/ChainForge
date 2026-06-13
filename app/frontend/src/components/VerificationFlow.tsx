@@ -20,7 +20,7 @@ const ACCEPTED_MIME_TYPES = ['image/png', 'image/jpeg', 'image/webp'] as const;
 const ACCEPTED_MIME_SET: ReadonlySet<string> = new Set(ACCEPTED_MIME_TYPES);
 const MAX_IMAGE_BYTES = 5 * 1024 * 1024; // 5 MB
 const MIN_TEXT_LENGTH = 20;
-const DRAFT_STORAGE_KEY = 'soter.verification-flow.draft.v1';
+const DRAFT_STORAGE_KEY = 'chainforge.verification-flow.draft.v1';
 
 /* ─── PII detection ─────────────────────────────────────────────────────── */
 

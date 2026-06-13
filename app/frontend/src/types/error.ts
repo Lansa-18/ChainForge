@@ -16,7 +16,7 @@ export const ERROR_METADATA: Record<ErrorCategory, ErrorMetadata> = {
     hints: [
       'Ensure the Freighter browser extension is installed',
       'Check if your wallet is locked or requires a password',
-      'Verify you have granted permission to Soter'
+      'Verify you have granted permission to ChainForge'
     ],
     remediation: 'Try reconnecting your wallet or unlocking the extension.',
     canRetry: true,
@@ -38,7 +38,7 @@ export const ERROR_METADATA: Record<ErrorCategory, ErrorMetadata> = {
     hints: [
       'The system might be under heavy load',
       'Scheduled maintenance might be in progress',
-      'Check the Soter status page for updates'
+      'Check the ChainForge status page for updates'
     ],
     remediation: 'We\'re working on it. Please try again in a few minutes.',
     canRetry: true,
@@ -49,7 +49,7 @@ export const ERROR_METADATA: Record<ErrorCategory, ErrorMetadata> = {
       'Required environment variables are missing or have an invalid value. ' +
       'This deployment is not correctly configured and cannot run.',
     hints: [
-      'Set NEXT_PUBLIC_API_URL to the full backend URL (e.g. https://api.soter.app)',
+      'Set NEXT_PUBLIC_API_URL to the full backend URL (e.g. https://api.chainforge.app)',
       'Set NEXT_PUBLIC_STELLAR_NETWORK to testnet, mainnet, or futurenet',
       'On Vercel: add the variables under Project → Settings → Environment Variables',
       'After updating variables, redeploy the project for them to take effect',
