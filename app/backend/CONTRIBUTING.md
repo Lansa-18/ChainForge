@@ -1,26 +1,31 @@
-# Contributing (Backend)
+# Contributing to ChainForge Backend
 
-## Scope
+This document covers the development workflow, conventions, and expectations for the backend module (`app/backend`).
 
-This document applies to `app/backend` only.
+---
 
 ## Workflow
 
 - Create a branch from `main`:
   - `feature/<short-name>` for new work
   - `fix/<short-name>` for bug fixes
-  - `chore/<short-name>` for tooling/docs
+  - `chore/<short-name>` for tooling and documentation
 
-## Commits
+## Commit conventions
 
-- Use conventional commits:
-  - `feat(backend): ...`
-  - `fix(backend): ...`
-  - `chore(backend): ...`
+Use conventional commits with the `backend` scope:
 
-## Local checks (required)
+- `feat(backend): ...` — New features
+- `fix(backend): ...` — Bug fixes
+- `docs(backend): ...` — Documentation
+- `refactor(backend): ...` — Code restructuring
+- `chore(backend): ...` — Tooling, dependencies, config
 
-Run from repo root:
+---
+
+## Local checks
+
+Run from the monorepo root:
 
 ```bash
 pnpm install
@@ -35,19 +40,19 @@ pnpm --filter backend prisma:generate
 pnpm --filter backend prisma:migrate
 ```
 
-## Pull Request expectations
+---
 
-Include all of the following in the PR description:
+## Pull request expectations
 
-- **What changed**
-- **How to run locally**
-- **Test logs**
+Include the following in the PR description:
+
+- **What changed** — Brief summary of the change and why it's needed
+- **How to run locally** — Setup steps if different from standard workflow
+- **Test logs** — Output from:
   - `pnpm --filter backend test`
   - `pnpm --filter backend lint`
-- **Curl output** for `/health`
-  - `curl -s http://localhost:3001/health | jq`
-- **File tree excerpt** proving docs exist
-- **Closes** `#<issue_id>`
+- **Health check** — `curl -s http://localhost:3001/health | jq`
+- **Closes** — Reference to any related issue (`Closes #<issue_id>`)
 
 ## PR checklist
 
@@ -56,3 +61,10 @@ Include all of the following in the PR description:
 - [ ] `pnpm --filter backend lint` passes
 - [ ] Database migration included if schema changed
 - [ ] `/health` returns `200` locally
+
+---
+
+## See also
+
+- [Module README](./README.md) — Environment configuration and API reference
+- [Root README](../../README.md) — Project overview
