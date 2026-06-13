@@ -1,13 +1,13 @@
 'use client';
 
 import Link from 'next/link';
-import { 
-  AlertTriangle, 
-  WifiOff, 
-  ServerCrash, 
-  Wallet, 
-  RefreshCcw, 
-  Home, 
+import {
+  AlertTriangle,
+  WifiOff,
+  ServerCrash,
+  Wallet,
+  RefreshCcw,
+  Home,
   ChevronRight,
   Info,
   Settings2
@@ -32,7 +32,7 @@ export function ErrorState({
 }: ErrorStateProps) {
   const category = manualCategory || categorizeError(error);
   const metadata = ERROR_METADATA[category];
-  
+ 
   const title = manualTitle || metadata.title;
   const description = manualDescription || metadata.description;
   const showDetails = process.env.NODE_ENV !== 'production';
@@ -67,7 +67,7 @@ export function ErrorState({
             }`}>
               <CategoryIcon size={32} strokeWidth={1.5} />
             </div>
-            
+           
             <div className="space-y-1">
               <div className="inline-flex items-center rounded-full bg-white/5 px-3 py-0.5 text-[10px] font-bold uppercase tracking-widest text-slate-400 border border-white/5">
                 {category} error detected
@@ -114,7 +114,7 @@ export function ErrorState({
               <p className="text-sm leading-relaxed text-slate-400">
                 {metadata.remediation}
               </p>
-              
+             
               <div className="mt-6 space-y-3">
                 {metadata.hints.map((hint, i) => (
                   <div key={i} className="flex items-start gap-3 group">
@@ -153,7 +153,7 @@ export function ErrorState({
 
       {/* Footer Support Hub */}
       <div className="absolute bottom-8 left-0 right-0 z-10 flex justify-center px-4">
-        <Link 
+        <Link
           href="/help"
           className="group flex items-center gap-2 text-xs font-medium text-slate-500 transition-colors hover:text-slate-300"
         >
