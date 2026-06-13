@@ -29,7 +29,7 @@ import { ForceUpgradeScreen } from './src/screens/ForceUpgradeScreen';
 // ---------------------------------------------------------------------------
 
 const linking = {
-  prefixes: [ExpoLinking.createURL('/'), 'soter://'],
+  prefixes: [ExpoLinking.createURL('/'), 'chainforge://'],
 
   config: {
     screens: {
