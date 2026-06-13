@@ -24,7 +24,7 @@ const geistMono = Geist_Mono({
 });
 
 export const metadata: Metadata = {
-  title: 'Soter - Transparent Aid, Directly Delivered',
+  title: 'ChainForge - Transparent Aid, Directly Delivered',
   description:
     'Open-source, privacy-first platform on Stellar blockchain empowering direct humanitarian aid distribution with AI verification and immutable transparency.',
 };
