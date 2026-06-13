@@ -1,4 +1,4 @@
-# Simple Dockerfile for Soter AI Service
+# Simple Dockerfile for ChainForge AI Service
 FROM python:3.10-slim
 
 # Set environment variables
