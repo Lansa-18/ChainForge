@@ -81,7 +81,7 @@ class TestOCRService:
     def test_process_image_returns_result(self, mock_labels, monkeypatch):
         mock_observe = MagicMock()
         mock_labels.return_value.observe = mock_observe
-        
+       
         from PIL import Image
 
         def fake_run_tesseract(_image):
@@ -98,7 +98,7 @@ class TestOCRService:
         assert isinstance(result.fields, dict)
         assert isinstance(result.raw_text, str)
         assert result.processing_time_ms >= 0
-        
+       
         mock_labels.assert_called_with(step_name='ocr')
         assert mock_observe.call_count == 2
 
