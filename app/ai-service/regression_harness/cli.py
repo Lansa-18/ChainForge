@@ -8,11 +8,11 @@ from regression_harness.evaluator import OCREvaluator
 def load_samples(ground_truth_path: str) -> List[EvaluationSample]:
     with open(ground_truth_path, 'r') as f:
         data = json.load(f)
-    
+   
     samples = []
     for s in data.get("samples", []):
         bboxes = {
-            k: BoundingBox.from_dict(v) 
+            k: BoundingBox.from_dict(v)
             for k, v in s.get("expected_bboxes", {}).items()
         }
         samples.append(EvaluationSample(
@@ -54,9 +54,9 @@ def main():
     parser.add_argument("--dataset", default="regression_harness/dataset/ground_truth.json", help="Path to ground truth JSON")
     parser.add_argument("--output", help="Path to save JSON report")
     parser.add_argument("--threshold", type=float, default=0.8, help="Confidence threshold")
-    
+   
     args = parser.parse_args()
-    
+   
     base_dir = os.path.dirname(os.path.abspath(__file__))
     # Adjust base_dir if it's currently inside regression_harness
     if base_dir.endswith("regression_harness"):
@@ -70,12 +70,12 @@ def main():
 
     samples = load_samples(gt_path)
     evaluator = OCREvaluator(tolerance_threshold=args.threshold)
-    
+   
     print(f"Running evaluation on {len(samples)} samples...")
     report = evaluator.run_suite(samples, os.path.dirname(gt_path))
-    
+   
     print_summary(report)
-    
+   
     if args.output:
         with open(args.output, 'w') as f:
             json.dump(report.to_dict(), f, indent=2)
