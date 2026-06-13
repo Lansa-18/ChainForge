@@ -39,7 +39,7 @@ for _mod in _PKG_STUBS:
         has_pkg = spec is not None
     except Exception:
         has_pkg = False
-        
+       
     if not has_pkg:
         if _mod not in sys.modules:
             sys.modules[_mod] = _make_pkg(_mod)
