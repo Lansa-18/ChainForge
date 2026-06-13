@@ -52,7 +52,7 @@ export function Navbar() {
           <Link href="/" className="text-xl font-bold">
             ChainForge
           </Link>
-          
+         
           <div className="hidden md:flex items-center gap-2">
             {navigationItems.map(item => {
               const isActive = isActiveRoute(item.href, pathname);
