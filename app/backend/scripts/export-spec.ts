@@ -22,7 +22,10 @@ import { AppModule } from '../src/app.module';
 import { buildSwaggerConfig } from '../src/swagger.config';
 
 async function exportSpec() {
-  const app = await NestFactory.create(AppModule, { logger: false });
+  // abortOnError: false lets infrastructure providers (Redis, BullMQ) fail
+  // to connect without aborting the process. Swagger generation only reads
+  // decorator metadata so it succeeds regardless of connection state.
+  const app = await NestFactory.create(AppModule, { logger: false, abortOnError: false });
 
   app.setGlobalPrefix('api');
   app.enableVersioning({
