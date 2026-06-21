@@ -4,10 +4,17 @@ import { createHmac, timingSafeEqual } from 'node:crypto';
 
 @Injectable()
 export class HmacService {
-  private readonly secret: string;
+  private readonly secret: string | undefined;
 
   constructor(private readonly config: ConfigService) {
-    this.secret = this.config.getOrThrow<string>('WEBHOOK_SECRET');
+    this.secret = this.config.get<string>('WEBHOOK_SECRET');
+  }
+
+  private getSecret(): string {
+    if (!this.secret) {
+      throw new Error('WEBHOOK_SECRET is not configured');
+    }
+    return this.secret;
   }
 
   /**
@@ -15,7 +22,7 @@ export class HmacService {
    * Use this when sending outbound callbacks so the receiver can verify.
    */
   sign(payload: string): string {
-    return createHmac('sha256', this.secret).update(payload).digest('hex');
+    return createHmac('sha256', this.getSecret()).update(payload).digest('hex');
   }
 
   /**
