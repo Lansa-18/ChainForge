@@ -39,3 +39,15 @@ jobs:
 
       - name: Build
         run: pnpm --filter backend run build
+
+      - name: Export OpenAPI spec
+        working-directory: app/backend
+        env:
+          DATABASE_URL: file:./prisma/dev.db
+          NODE_ENV: development
+        run: npm run spec:export
+
+      - name: Check for OpenAPI spec drift
+        run: |
+          git diff --exit-code app/frontend/openapi.json || \
+            (echo "ERROR: openapi.json is out of date. Run 'npm run spec:export' in app/backend and commit app/frontend/openapi.json." && exit 1)

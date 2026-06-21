@@ -1,0 +1,6559 @@
+{
+  "openapi": "3.0.0",
+  "paths": {
+    "/api/v1": {
+      "get": {
+        "description": "Returns a welcome message and API information. Part of v1 API.",
+        "operationId": "AppController_getHello_v1",
+        "parameters": [],
+        "responses": {
+          "200": {
+            "description": "Welcome message returned successfully.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "example": {
+                    "message": "Welcome to ChainForge API",
+                    "version": "v1",
+                    "docs": "/api/docs"
+                  }
+                }
+              }
+            }
+          }
+        },
+        "summary": "Root endpoint (v1)",
+        "tags": [
+          "App"
+        ]
+      }
+    },
+    "/api/v1/health": {
+      "get": {
+        "description": "Returns process liveness details and service metadata. Part of v1 API.",
+        "operationId": "HealthController_check_v1",
+        "parameters": [],
+        "responses": {
+          "200": {
+            "description": "Service is alive and basic metadata retrieved.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "example": {
+                    "status": "ok",
+                    "version": "1.0.0",
+                    "timestamp": "2025-02-23T12:00:00.000Z"
+                  }
+                }
+              }
+            }
+          }
+        },
+        "summary": "Check system liveness and basic service metadata",
+        "tags": [
+          "Health"
+        ]
+      }
+    },
+    "/api/v1/deprecated-test": {
+      "get": {
+        "deprecated": true,
+        "description": "⚠️ **DEPRECATED**\n\n**Reason:** This endpoint is for testing deprecation headers.\n\n**Deprecated since:** 2025-01-01\n\n**Sunset date:** 2025-12-31\n\n**Alternative:** /api/v1/health\n\n**Migration guide:** https://docs.chainforge.app/migration",
+        "operationId": "AppController_deprecatedTest_v1",
+        "parameters": [],
+        "responses": {
+          "200": {
+            "description": "Success (Deprecated)",
+            "headers": {
+              "Deprecation": {
+                "description": "Deprecation date: 2025-01-01",
+                "schema": {
+                  "type": "string"
+                }
+              },
+              "Sunset": {
+                "description": "Sunset date: 2025-12-31",
+                "schema": {
+                  "type": "string"
+                }
+              }
+            }
+          }
+        },
+        "summary": "",
+        "tags": [
+          "App"
+        ]
+      }
+    },
+    "/api/v1/health/live": {
+      "get": {
+        "description": "Returns process-level liveness information. Intended for orchestration liveness checks.",
+        "operationId": "HealthController_liveness_v1",
+        "parameters": [],
+        "responses": {
+          "200": {
+            "description": "Process is alive.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "example": {
+                    "status": "ok",
+                    "uptime": "2d 5h 12m 30s"
+                  }
+                }
+              }
+            }
+          }
+        },
+        "summary": "Liveness probe",
+        "tags": [
+          "Health"
+        ]
+      }
+    },
+    "/api/v1/health/ready": {
+      "get": {
+        "description": "Returns dependency readiness (database and optional Stellar RPC). Responds 503 when not ready.",
+        "operationId": "HealthController_readiness_v1",
+        "parameters": [],
+        "responses": {
+          "200": {
+            "description": "Service is ready to serve traffic.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "example": {
+                    "ready": true,
+                    "dependencies": {
+                      "database": "up",
+                      "stellar": "up"
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "503": {
+            "description": "Service is not ready (one or more dependencies are down).",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "example": {
+                    "ready": false,
+                    "dependencies": {
+                      "database": "down",
+                      "stellar": "up"
+                    }
+                  }
+                }
+              }
+            }
+          }
+        },
+        "summary": "Readiness probe",
+        "tags": [
+          "Health"
+        ]
+      }
+    },
+    "/api/v1/health/error": {
+      "get": {
+        "operationId": "HealthController_triggerError_v1",
+        "parameters": [],
+        "responses": {
+          "500": {
+            "description": "Test error triggered successfully."
+          }
+        },
+        "summary": "Trigger an error for testing",
+        "tags": [
+          "Health"
+        ]
+      }
+    },
+    "/api/v1/health/onchain": {
+      "get": {
+        "description": "Performs a read-only contract call to verify connectivity to Soroban RPC and contract functionality. Requires authentication.",
+        "operationId": "HealthController_onchainHealth_v1",
+        "parameters": [],
+        "responses": {
+          "200": {
+            "description": "On-chain health check completed successfully"
+          },
+          "503": {
+            "description": "On-chain health check failed"
+          }
+        },
+        "summary": "On-chain contract health probe (internal use)",
+        "tags": [
+          "Health"
+        ]
+      }
+    },
+    "/api/v1/admin/ledger/backfill": {
+      "post": {
+        "description": "Start a backfill job to process a range of ledgers and populate missing ledger entries. Idempotent - can be run repeatedly without duplicating data.",
+        "operationId": "LedgerAdminController_triggerBackfill_v1",
+        "parameters": [],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "startLedger": {
+                    "type": "number",
+                    "description": "Starting ledger sequence number"
+                  },
+                  "endLedger": {
+                    "type": "number",
+                    "description": "Ending ledger sequence number"
+                  },
+                  "campaignId": {
+                    "type": "string",
+                    "description": "Optional campaign ID to filter"
+                  },
+                  "batchSize": {
+                    "type": "number",
+                    "description": "Number of ledgers to process per batch (default: 100)"
+                  }
+                },
+                "required": [
+                  "startLedger",
+                  "endLedger"
+                ]
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Backfill job queued successfully.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "example": {
+                    "jobId": "job_123",
+                    "startLedger": 1000,
+                    "endLedger": 2000,
+                    "status": "queued",
+                    "processedCount": 0,
+                    "totalCount": 1001
+                  }
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Invalid request parameters."
+          },
+          "401": {
+            "description": "Unauthorized - valid JWT token required."
+          },
+          "403": {
+            "description": "Access denied - admin role required."
+          }
+        },
+        "summary": "Trigger ledger backfill job",
+        "tags": [
+          "Ledger Admin"
+        ]
+      }
+    },
+    "/api/v1/admin/ledger/backfill/{jobId}": {
+      "get": {
+        "description": "Retrieve the current status of a backfill job.",
+        "operationId": "LedgerAdminController_getBackfillStatus_v1",
+        "parameters": [
+          {
+            "name": "jobId",
+            "required": true,
+            "in": "path",
+            "description": "Job ID returned from triggerBackfill",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Backfill status retrieved successfully."
+          },
+          "401": {
+            "description": "Unauthorized - valid JWT token required."
+          },
+          "403": {
+            "description": "Access denied - admin role required."
+          }
+        },
+        "summary": "Get backfill job status",
+        "tags": [
+          "Ledger Admin"
+        ]
+      }
+    },
+    "/api/v1/admin/ledger/reconcile": {
+      "post": {
+        "description": "Start a reconciliation job to compare on-chain data against stored records and detect discrepancies.",
+        "operationId": "LedgerAdminController_triggerReconciliation_v1",
+        "parameters": [],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "startLedger": {
+                    "type": "number",
+                    "description": "Starting ledger sequence number"
+                  },
+                  "endLedger": {
+                    "type": "number",
+                    "description": "Ending ledger sequence number"
+                  },
+                  "campaignId": {
+                    "type": "string",
+                    "description": "Optional campaign ID to filter"
+                  },
+                  "thresholdPercent": {
+                    "type": "number",
+                    "description": "Threshold percentage for amount mismatch (default: 5)"
+                  }
+                },
+                "required": [
+                  "startLedger",
+                  "endLedger"
+                ]
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Reconciliation job queued successfully.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "example": {
+                    "jobId": "job_456",
+                    "startLedger": 1000,
+                    "endLedger": 2000,
+                    "status": "queued",
+                    "totalLedgers": 1001,
+                    "checkedLedgers": 0,
+                    "discrepancies": [],
+                    "summary": {
+                      "totalDiscrepancies": 0,
+                      "bySeverity": {
+                        "low": 0,
+                        "medium": 0,
+                        "high": 0
+                      },
+                      "byType": {
+                        "missing": 0,
+                        "amount_mismatch": 0,
+                        "count_mismatch": 0
+                      }
+                    },
+                    "actionable": false
+                  }
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Invalid request parameters."
+          },
+          "401": {
+            "description": "Unauthorized - valid JWT token required."
+          },
+          "403": {
+            "description": "Access denied - admin role required."
+          }
+        },
+        "summary": "Trigger ledger reconciliation job",
+        "tags": [
+          "Ledger Admin"
+        ]
+      }
+    },
+    "/api/v1/admin/ledger/reconcile/{jobId}": {
+      "get": {
+        "description": "Retrieve the current status and report of a reconciliation job.",
+        "operationId": "LedgerAdminController_getReconciliationStatus_v1",
+        "parameters": [
+          {
+            "name": "jobId",
+            "required": true,
+            "in": "path",
+            "description": "Job ID returned from triggerReconciliation",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Reconciliation status retrieved successfully."
+          },
+          "401": {
+            "description": "Unauthorized - valid JWT token required."
+          },
+          "403": {
+            "description": "Access denied - admin role required."
+          }
+        },
+        "summary": "Get reconciliation job status",
+        "tags": [
+          "Ledger Admin"
+        ]
+      }
+    },
+    "/api/v1/jobs/status": {
+      "get": {
+        "description": "Retrieves the count of waiting, active, completed, failed, and delayed jobs for all system queues.",
+        "operationId": "JobsController_getStatus_v1",
+        "parameters": [],
+        "responses": {
+          "200": {
+            "description": "Queue statuses retrieved successfully.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "example": {
+                    "verification": {
+                      "name": "verification",
+                      "waiting": 0,
+                      "active": 0,
+                      "completed": 10,
+                      "failed": 0,
+                      "delayed": 0
+                    },
+                    "notifications": {
+                      "name": "notifications",
+                      "waiting": 0,
+                      "active": 0,
+                      "completed": 5,
+                      "failed": 0,
+                      "delayed": 0
+                    },
+                    "onchain": {
+                      "name": "onchain",
+                      "waiting": 0,
+                      "active": 0,
+                      "completed": 2,
+                      "failed": 0,
+                      "delayed": 0
+                    }
+                  }
+                }
+              }
+            }
+          }
+        },
+        "summary": "Get status of all background job queues",
+        "tags": [
+          "Jobs"
+        ]
+      }
+    },
+    "/api/v1/jobs/health": {
+      "get": {
+        "description": "Checks if any core queues are degraded (too many waiting or failed jobs).",
+        "operationId": "JobsController_getHealth_v1",
+        "parameters": [],
+        "responses": {
+          "200": {
+            "description": ""
+          }
+        },
+        "summary": "Get overall health of background job queues",
+        "tags": [
+          "Jobs"
+        ]
+      }
+    },
+    "/api/v1/metrics": {
+      "get": {
+        "operationId": "PrometheusController_index_v1",
+        "parameters": [],
+        "responses": {
+          "200": {
+            "description": ""
+          }
+        },
+        "tags": [
+          "Prometheus"
+        ]
+      }
+    },
+    "/api/v1/aid/campaigns": {
+      "post": {
+        "description": "Initializes a new aid campaign with provided metadata. Requires appropriate permissions.",
+        "operationId": "AidController_createCampaign_v1",
+        "parameters": [],
+        "responses": {
+          "201": {
+            "description": "Campaign created successfully."
+          },
+          "400": {
+            "description": "Invalid input parameters."
+          }
+        },
+        "security": [
+          {
+            "JWT-auth": []
+          }
+        ],
+        "summary": "Create a new campaign",
+        "tags": [
+          "Aid"
+        ]
+      }
+    },
+    "/api/v1/aid/campaigns/{id}": {
+      "patch": {
+        "description": "Modifies an existing campaign. Only provided fields will be updated.",
+        "operationId": "AidController_updateCampaign_v1",
+        "parameters": [
+          {
+            "name": "id",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Campaign updated successfully."
+          },
+          "400": {
+            "description": "Invalid update data."
+          },
+          "404": {
+            "description": "The specified campaign was not found."
+          }
+        },
+        "security": [
+          {
+            "JWT-auth": []
+          }
+        ],
+        "summary": "Update a campaign",
+        "tags": [
+          "Aid"
+        ]
+      },
+      "delete": {
+        "description": "Soft-archives a campaign, making it invisible to standard listings.",
+        "operationId": "AidController_archiveCampaign_v1",
+        "parameters": [
+          {
+            "name": "id",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Campaign archived successfully."
+          },
+          "404": {
+            "description": "The specified campaign was not found."
+          }
+        },
+        "security": [
+          {
+            "JWT-auth": []
+          }
+        ],
+        "summary": "Archive a campaign",
+        "tags": [
+          "Aid"
+        ]
+      }
+    },
+    "/api/v1/aid/claims/{id}/status": {
+      "put": {
+        "description": "Moves a claim from one status to another (e.g., pending -> approved).",
+        "operationId": "AidController_transitionClaim_v1",
+        "parameters": [
+          {
+            "name": "id",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Claim status transitioned successfully."
+          },
+          "400": {
+            "description": "Invalid status transition requested."
+          },
+          "404": {
+            "description": "The specified claim was not found."
+          }
+        },
+        "security": [
+          {
+            "JWT-auth": []
+          }
+        ],
+        "summary": "Transition a claim status",
+        "tags": [
+          "Aid"
+        ]
+      }
+    },
+    "/api/v1/aid/webhook": {
+      "post": {
+        "description": "Receives notifications from the AI service when background tasks complete.",
+        "operationId": "AidController_handleTaskWebhook_v1",
+        "parameters": [],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/AiTaskWebhookDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Webhook received successfully."
+          },
+          "400": {
+            "description": "Invalid webhook payload."
+          }
+        },
+        "security": [
+          {
+            "JWT-auth": []
+          }
+        ],
+        "summary": "Webhook for AI task notifications",
+        "tags": [
+          "Aid"
+        ]
+      }
+    },
+    "/api/v1/verification/claims/{id}/enqueue": {
+      "post": {
+        "description": "Add a claim to the verification queue for async processing. Returns immediately with job ID.",
+        "operationId": "VerificationController_enqueueVerification_v1",
+        "parameters": [
+          {
+            "name": "id",
+            "required": true,
+            "in": "path",
+            "description": "Unique identifier of the claim to verify",
+            "schema": {
+              "example": "clv789xyz123",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "202": {
+            "description": "Verification job enqueued successfully.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "example": {
+                    "jobId": "12345",
+                    "claimId": "clv789xyz123",
+                    "status": "queued",
+                    "message": "Verification job enqueued successfully"
+                  }
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Invalid claim ID or malformed request."
+          },
+          "401": {
+            "description": "Invalid or missing API key."
+          },
+          "404": {
+            "description": "The requested claim could not be found."
+          }
+        },
+        "security": [
+          {
+            "x-api-key": []
+          }
+        ],
+        "summary": "Enqueue claim verification job",
+        "tags": [
+          "Verification"
+        ]
+      }
+    },
+    "/api/v1/verification/metrics": {
+      "get": {
+        "description": "Retrieve current queue statistics including waiting, active, completed, and failed job counts",
+        "operationId": "VerificationController_getMetrics_v1",
+        "parameters": [],
+        "responses": {
+          "200": {
+            "description": "Queue metrics retrieved successfully.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "example": {
+                    "waiting": 5,
+                    "active": 2,
+                    "completed": 150,
+                    "failed": 3,
+                    "total": 160
+                  }
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Invalid or missing API key."
+          }
+        },
+        "security": [
+          {
+            "x-api-key": []
+          }
+        ],
+        "summary": "Get verification queue metrics",
+        "tags": [
+          "Verification"
+        ]
+      }
+    },
+    "/api/v1/verification/start": {
+      "post": {
+        "description": "Start a verification session. Sends an OTP to the given email or phone. Rate-limited per identifier.",
+        "operationId": "VerificationController_startVerification_v1",
+        "parameters": [],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/StartVerificationDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Verification started; code sent to channel.",
+            "content": {
+              "application/json": {
+                "examples": {
+                  "email": {
+                    "summary": "Email verification started",
+                    "value": {
+                      "sessionId": "ses_email_123",
+                      "channel": "email",
+                      "expiresAt": "2025-02-19T12:10:00.000Z",
+                      "message": "Verification code sent to email. Code expires in 10 minutes."
+                    }
+                  },
+                  "phone": {
+                    "summary": "Phone verification started",
+                    "value": {
+                      "sessionId": "ses_phone_456",
+                      "channel": "phone",
+                      "expiresAt": "2025-02-19T12:10:00.000Z",
+                      "message": "Verification code sent to phone. Code expires in 10 minutes."
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Invalid input parameters or rate limit exceeded for this identifier."
+          }
+        },
+        "security": [
+          {
+            "x-api-key": []
+          }
+        ],
+        "summary": "Start verification flow (OTP/email/phone)",
+        "tags": [
+          "Verification"
+        ]
+      }
+    },
+    "/api/v1/verification/resend": {
+      "post": {
+        "description": "Resend OTP for an existing pending session. Limited resends per session.",
+        "operationId": "VerificationController_resendVerification_v1",
+        "parameters": [],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ResendVerificationDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "New verification code sent successfully.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "example": {
+                    "sessionId": "clv789xyz123",
+                    "expiresAt": "2025-02-19T12:10:00.000Z",
+                    "message": "New verification code sent."
+                  }
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Session is inactive, expired, or resend limit has been reached."
+          },
+          "404": {
+            "description": "The specified verification session was not found."
+          }
+        },
+        "security": [
+          {
+            "x-api-key": []
+          }
+        ],
+        "summary": "Resend verification code",
+        "tags": [
+          "Verification"
+        ]
+      }
+    },
+    "/api/v1/verification/complete": {
+      "post": {
+        "description": "Submit the OTP code to complete the verification. Attempts are rate-limited per session.",
+        "operationId": "VerificationController_completeVerification_v1",
+        "parameters": [],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/CompleteVerificationDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Verification completed successfully.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "example": {
+                    "sessionId": "clv789xyz123",
+                    "verified": true,
+                    "message": "Verification completed successfully."
+                  }
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Invalid code, session expired, or too many failed attempts."
+          },
+          "404": {
+            "description": "The specified verification session was not found."
+          }
+        },
+        "security": [
+          {
+            "x-api-key": []
+          }
+        ],
+        "summary": "Complete verification with OTP",
+        "tags": [
+          "Verification"
+        ]
+      }
+    },
+    "/api/v1/verification": {
+      "post": {
+        "description": "Submit identity documents and information for verification. Supports document uploads and biometric data. Part of v1 API.",
+        "operationId": "VerificationController_create_v1",
+        "parameters": [],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/CreateVerificationDto"
+              }
+            },
+            "multipart/form-data": {
+              "schema": {
+                "$ref": "#/components/schemas/CreateVerificationDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "Verification request submitted successfully.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "example": {
+                    "id": "clv789xyz123",
+                    "userId": "clu456def789",
+                    "documentType": "NATIONAL_ID",
+                    "status": "PENDING",
+                    "submittedAt": "2025-01-23T11:00:00.000Z",
+                    "verificationCode": "VER-2025-0123"
+                  }
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Invalid verification data or unsupported document format."
+          },
+          "401": {
+            "description": "Missing or invalid authentication credentials."
+          }
+        },
+        "security": [
+          {
+            "x-api-key": []
+          }
+        ],
+        "summary": "Submit identity verification request (v1)",
+        "tags": [
+          "Verification"
+        ]
+      }
+    },
+    "/api/v1/verification/claims/{id}": {
+      "get": {
+        "description": "Retrieve the current verification status and details of a claim",
+        "operationId": "VerificationController_findClaim_v1",
+        "parameters": [
+          {
+            "name": "id",
+            "required": true,
+            "in": "path",
+            "description": "Unique identifier of the claim",
+            "schema": {
+              "example": "clv789xyz123",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Claim verification status retrieved successfully.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "example": {
+                    "id": "clv789xyz123",
+                    "status": "verified",
+                    "verificationScore": 0.85,
+                    "verificationResult": {
+                      "score": 0.85,
+                      "confidence": 0.92,
+                      "details": {
+                        "factors": [
+                          "Document authenticity verified",
+                          "Identity cross-reference passed"
+                        ],
+                        "riskLevel": "low"
+                      },
+                      "processedAt": "2025-01-23T14:30:00.000Z"
+                    },
+                    "verifiedAt": "2025-01-23T14:30:00.000Z"
+                  }
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Unauthorized - valid JWT token required."
+          },
+          "404": {
+            "description": "The specified claim could not be found."
+          }
+        },
+        "security": [
+          {
+            "x-api-key": []
+          },
+          {
+            "JWT-auth": []
+          }
+        ],
+        "summary": "Get claim verification status",
+        "tags": [
+          "Verification"
+        ]
+      }
+    },
+    "/api/v1/verification/{id}": {
+      "get": {
+        "description": "Retrieve the current status and details of a verification request. Part of v1 API.",
+        "operationId": "VerificationController_findOne_v1",
+        "parameters": [
+          {
+            "name": "id",
+            "required": true,
+            "in": "path",
+            "description": "Unique identifier of the verification request",
+            "schema": {
+              "example": "clv789xyz123",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Verification status retrieved successfully.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "example": {
+                    "id": "clv789xyz123",
+                    "userId": "clu456def789",
+                    "documentType": "NATIONAL_ID",
+                    "status": "APPROVED",
+                    "submittedAt": "2025-01-23T11:00:00.000Z",
+                    "reviewedAt": "2025-01-23T14:30:00.000Z",
+                    "verificationCode": "VER-2025-0123",
+                    "notes": "All documents verified successfully"
+                  }
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Unauthorized - valid JWT token required."
+          },
+          "404": {
+            "description": "The specified verification request was not found."
+          }
+        },
+        "security": [
+          {
+            "x-api-key": []
+          },
+          {
+            "JWT-auth": []
+          }
+        ],
+        "summary": "Get verification status (v1)",
+        "tags": [
+          "Verification"
+        ]
+      }
+    },
+    "/api/v1/verification/user/{userId}": {
+      "get": {
+        "description": "Retrieve all verification requests for a specific user. Part of v1 API.",
+        "operationId": "VerificationController_findByUser_v1",
+        "parameters": [
+          {
+            "name": "userId",
+            "required": true,
+            "in": "path",
+            "description": "Unique identifier of the user",
+            "schema": {
+              "example": "clu456def789",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "User verification history retrieved successfully.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "example": [
+                    {
+                      "id": "clv789xyz123",
+                      "documentType": "NATIONAL_ID",
+                      "status": "APPROVED",
+                      "submittedAt": "2025-01-23T11:00:00.000Z",
+                      "reviewedAt": "2025-01-23T14:30:00.000Z"
+                    }
+                  ]
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Unauthorized - valid JWT token required."
+          }
+        },
+        "security": [
+          {
+            "x-api-key": []
+          },
+          {
+            "JWT-auth": []
+          }
+        ],
+        "summary": "Get user verification history (v1)",
+        "tags": [
+          "Verification"
+        ]
+      }
+    },
+    "/api/v1/verification/{id}/complete": {
+      "post": {
+        "description": "Updates the status of a verification request to complete and logs the action.",
+        "operationId": "VerificationController_update_v1",
+        "parameters": [
+          {
+            "name": "id",
+            "required": true,
+            "in": "path",
+            "description": "Unique identifier of the verification request",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Verification status updated successfully."
+          },
+          "404": {
+            "description": "The specified verification request was not found."
+          }
+        },
+        "security": [
+          {
+            "x-api-key": []
+          }
+        ],
+        "summary": "Mark verification as complete",
+        "tags": [
+          "Verification"
+        ]
+      }
+    },
+    "/api/v1/verification/{id}/notes": {
+      "post": {
+        "description": "Adds a secure internal note for staff review only.",
+        "operationId": "VerificationController_addNote_v1",
+        "parameters": [
+          {
+            "name": "id",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/CreateInternalNoteDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "Internal note added successfully.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/InternalNoteResponseDto"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Access denied - staff role required."
+          }
+        },
+        "security": [
+          {
+            "x-api-key": []
+          }
+        ],
+        "summary": "Add an internal note to a verification record",
+        "tags": [
+          "Verification"
+        ]
+      },
+      "get": {
+        "description": "Retrieves all internal notes for a specific verification.",
+        "operationId": "VerificationController_getNotes_v1",
+        "parameters": [
+          {
+            "name": "id",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Internal notes retrieved successfully.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/InternalNoteResponseDto"
+                  }
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Access denied - staff role required."
+          }
+        },
+        "security": [
+          {
+            "x-api-key": []
+          }
+        ],
+        "summary": "List internal notes for a verification record",
+        "tags": [
+          "Verification"
+        ]
+      }
+    },
+    "/api/v1/verification-inbox": {
+      "get": {
+        "description": "Retrieve verification requests with filtering and pagination. Shows pending_review, approved, rejected, and needs_resubmission states.",
+        "operationId": "VerificationInboxController_getInbox_v1",
+        "parameters": [
+          {
+            "name": "status",
+            "required": false,
+            "in": "query",
+            "description": "Filter by verification status",
+            "schema": {
+              "enum": [
+                "pending_review",
+                "approved",
+                "rejected",
+                "needs_resubmission"
+              ],
+              "type": "string"
+            }
+          },
+          {
+            "name": "page",
+            "required": false,
+            "in": "query",
+            "description": "Page number (default: 1)",
+            "schema": {
+              "type": "number"
+            }
+          },
+          {
+            "name": "limit",
+            "required": false,
+            "in": "query",
+            "description": "Items per page (default: 20)",
+            "schema": {
+              "type": "number"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Verification inbox retrieved successfully.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "example": {
+                    "items": [
+                      {
+                        "id": "clv789xyz123",
+                        "status": "pending_review",
+                        "createdAt": "2025-01-23T11:00:00.000Z",
+                        "reviewedAt": null,
+                        "nextStepMessage": "Review identity documents for authenticity",
+                        "deepLink": "/verification/clv789xyz123"
+                      }
+                    ],
+                    "total": 45,
+                    "page": 1,
+                    "limit": 20,
+                    "totalPages": 3
+                  }
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Unauthorized - valid JWT token required."
+          },
+          "403": {
+            "description": "Access denied - operator or admin role required."
+          }
+        },
+        "security": [
+          {
+            "JWT-auth": []
+          }
+        ],
+        "summary": "Get verification inbox",
+        "tags": [
+          "Verification Inbox"
+        ]
+      }
+    },
+    "/api/v1/verification-inbox/stats": {
+      "get": {
+        "description": "Retrieve counts of verification requests by status for dashboard display.",
+        "operationId": "VerificationInboxController_getStats_v1",
+        "parameters": [],
+        "responses": {
+          "200": {
+            "description": "Statistics retrieved successfully.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "example": {
+                    "pending_review": 15,
+                    "approved": 120,
+                    "rejected": 8,
+                    "needs_resubmission": 5,
+                    "total": 148
+                  }
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Unauthorized - valid JWT token required."
+          },
+          "403": {
+            "description": "Access denied - operator or admin role required."
+          }
+        },
+        "security": [
+          {
+            "JWT-auth": []
+          }
+        ],
+        "summary": "Get verification inbox statistics",
+        "tags": [
+          "Verification Inbox"
+        ]
+      }
+    },
+    "/api/v1/verification-inbox/{id}/approve": {
+      "post": {
+        "description": "Mark a verification request as approved and set next step messaging.",
+        "operationId": "VerificationInboxController_approve_v1",
+        "parameters": [
+          {
+            "name": "id",
+            "required": true,
+            "in": "path",
+            "description": "Unique identifier of the verification request",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "nextStepMessage": {
+                    "type": "string"
+                  },
+                  "internalNote": {
+                    "type": "string"
+                  }
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Verification approved successfully.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "example": {
+                    "id": "clv789xyz123",
+                    "status": "approved",
+                    "reviewedAt": "2025-01-23T14:30:00.000Z",
+                    "nextStepMessage": "Verification approved. Proceed to disbursement."
+                  }
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Invalid request or verification already processed."
+          },
+          "404": {
+            "description": "The specified verification request was not found."
+          }
+        },
+        "security": [
+          {
+            "JWT-auth": []
+          }
+        ],
+        "summary": "Approve verification request",
+        "tags": [
+          "Verification Inbox"
+        ]
+      }
+    },
+    "/api/v1/verification-inbox/{id}/reject": {
+      "post": {
+        "description": "Mark a verification request as rejected with reason and next step messaging.",
+        "operationId": "VerificationInboxController_reject_v1",
+        "parameters": [
+          {
+            "name": "id",
+            "required": true,
+            "in": "path",
+            "description": "Unique identifier of the verification request",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "required": [
+                  "rejectionReason"
+                ],
+                "properties": {
+                  "rejectionReason": {
+                    "type": "string"
+                  },
+                  "nextStepMessage": {
+                    "type": "string"
+                  },
+                  "internalNote": {
+                    "type": "string"
+                  }
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Verification rejected successfully.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "example": {
+                    "id": "clv789xyz123",
+                    "status": "rejected",
+                    "reviewedAt": "2025-01-23T14:30:00.000Z",
+                    "rejectionReason": "Document appears fraudulent",
+                    "nextStepMessage": "Please resubmit with valid documentation"
+                  }
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Invalid request or verification already processed."
+          },
+          "404": {
+            "description": "The specified verification request was not found."
+          }
+        },
+        "security": [
+          {
+            "JWT-auth": []
+          }
+        ],
+        "summary": "Reject verification request",
+        "tags": [
+          "Verification Inbox"
+        ]
+      }
+    },
+    "/api/v1/verification-inbox/{id}/request-resubmission": {
+      "post": {
+        "description": "Mark a verification request as needing resubmission with specific requirements.",
+        "operationId": "VerificationInboxController_requestResubmission_v1",
+        "parameters": [
+          {
+            "name": "id",
+            "required": true,
+            "in": "path",
+            "description": "Unique identifier of the verification request",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "required": [
+                  "rejectionReason",
+                  "nextStepMessage"
+                ],
+                "properties": {
+                  "rejectionReason": {
+                    "type": "string"
+                  },
+                  "nextStepMessage": {
+                    "type": "string"
+                  },
+                  "internalNote": {
+                    "type": "string"
+                  }
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Resubmission requested successfully.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "example": {
+                    "id": "clv789xyz123",
+                    "status": "needs_resubmission",
+                    "reviewedAt": "2025-01-23T14:30:00.000Z",
+                    "rejectionReason": "Document expired",
+                    "nextStepMessage": "Please submit a current government-issued ID"
+                  }
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Invalid request or verification already processed."
+          },
+          "404": {
+            "description": "The specified verification request was not found."
+          }
+        },
+        "security": [
+          {
+            "JWT-auth": []
+          }
+        ],
+        "summary": "Request resubmission for verification",
+        "tags": [
+          "Verification Inbox"
+        ]
+      }
+    },
+    "/api/v1/verification-inbox/{id}": {
+      "get": {
+        "description": "Retrieve detailed information about a specific verification request including review history.",
+        "operationId": "VerificationInboxController_getDetails_v1",
+        "parameters": [
+          {
+            "name": "id",
+            "required": true,
+            "in": "path",
+            "description": "Unique identifier of the verification request",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Verification details retrieved successfully.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "example": {
+                    "id": "clv789xyz123",
+                    "status": "pending_review",
+                    "createdAt": "2025-01-23T11:00:00.000Z",
+                    "reviewedAt": null,
+                    "reviewedBy": null,
+                    "rejectionReason": null,
+                    "nextStepMessage": "Review identity documents for authenticity",
+                    "deepLink": "/verification/clv789xyz123"
+                  }
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Unauthorized - valid JWT token required."
+          },
+          "404": {
+            "description": "The specified verification request was not found."
+          }
+        },
+        "security": [
+          {
+            "JWT-auth": []
+          }
+        ],
+        "summary": "Get verification request details",
+        "tags": [
+          "Verification Inbox"
+        ]
+      }
+    },
+    "/api/v1/verification-inbox/{id}/notes": {
+      "post": {
+        "description": "Add an internal note visible only to reviewers. The action is recorded in the audit trail.",
+        "operationId": "VerificationInboxController_addInternalNote_v1",
+        "parameters": [
+          {
+            "name": "id",
+            "required": true,
+            "in": "path",
+            "description": "Unique identifier of the verification request",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "required": [
+                  "content"
+                ],
+                "properties": {
+                  "content": {
+                    "type": "string"
+                  },
+                  "category": {
+                    "type": "string"
+                  }
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Internal note added successfully.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "example": {
+                    "id": "note-abc123",
+                    "entityType": "verification",
+                    "entityId": "clv789xyz123",
+                    "content": "Contacted applicant for additional documents.",
+                    "authorId": "reviewer-001",
+                    "category": "follow_up",
+                    "createdAt": "2025-01-23T15:00:00.000Z"
+                  }
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "The specified verification request was not found."
+          }
+        },
+        "security": [
+          {
+            "JWT-auth": []
+          }
+        ],
+        "summary": "Add internal note to verification request",
+        "tags": [
+          "Verification Inbox"
+        ]
+      },
+      "get": {
+        "description": "Retrieve all internal notes attached to a verification request.",
+        "operationId": "VerificationInboxController_getInternalNotes_v1",
+        "parameters": [
+          {
+            "name": "id",
+            "required": true,
+            "in": "path",
+            "description": "Unique identifier of the verification request",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Internal notes retrieved successfully."
+          },
+          "404": {
+            "description": "The specified verification request was not found."
+          }
+        },
+        "security": [
+          {
+            "JWT-auth": []
+          }
+        ],
+        "summary": "List internal notes for a verification request",
+        "tags": [
+          "Verification Inbox"
+        ]
+      }
+    },
+    "/api/v1/audit": {
+      "get": {
+        "description": "Retrieves a filtered list of audit logs based on entity, actor, or time range.",
+        "operationId": "AuditController_getLogs_v1",
+        "parameters": [
+          {
+            "name": "limit",
+            "required": false,
+            "in": "query",
+            "description": "Items per page (default: 50, max: 200)",
+            "schema": {}
+          },
+          {
+            "name": "page",
+            "required": false,
+            "in": "query",
+            "description": "Page number (default: 1)",
+            "schema": {}
+          },
+          {
+            "name": "endTime",
+            "required": false,
+            "in": "query",
+            "description": "ISO string",
+            "schema": {}
+          },
+          {
+            "name": "startTime",
+            "required": false,
+            "in": "query",
+            "description": "ISO string",
+            "schema": {}
+          },
+          {
+            "name": "action",
+            "required": false,
+            "in": "query",
+            "schema": {}
+          },
+          {
+            "name": "actorId",
+            "required": false,
+            "in": "query",
+            "schema": {}
+          },
+          {
+            "name": "entityId",
+            "required": false,
+            "in": "query",
+            "schema": {}
+          },
+          {
+            "name": "entity",
+            "required": false,
+            "in": "query",
+            "schema": {}
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Audit logs retrieved successfully."
+          },
+          "401": {
+            "description": "Missing or invalid authentication credentials."
+          }
+        },
+        "security": [
+          {
+            "JWT-auth": []
+          }
+        ],
+        "summary": "Query audit logs",
+        "tags": [
+          "Audit"
+        ]
+      }
+    },
+    "/api/v1/audit/export": {
+      "get": {
+        "description": "Exports anonymized audit logs as JSON or CSV with pagination and date-range filtering. Sensitive actor and entity IDs are replaced with deterministic SHA-256 hashes.",
+        "operationId": "AuditController_exportLogs_v1",
+        "parameters": [
+          {
+            "name": "limit",
+            "required": false,
+            "in": "query",
+            "description": "Items per page (default: 50, max: 200)",
+            "schema": {}
+          },
+          {
+            "name": "page",
+            "required": false,
+            "in": "query",
+            "description": "Page number (default: 1)",
+            "schema": {}
+          },
+          {
+            "name": "actorId",
+            "required": false,
+            "in": "query",
+            "description": "Filter by actor ID",
+            "schema": {}
+          },
+          {
+            "name": "action",
+            "required": false,
+            "in": "query",
+            "description": "Filter by action type",
+            "schema": {}
+          },
+          {
+            "name": "entity",
+            "required": false,
+            "in": "query",
+            "description": "Filter by entity type",
+            "schema": {}
+          },
+          {
+            "name": "to",
+            "required": false,
+            "in": "query",
+            "description": "End date (ISO string)",
+            "schema": {}
+          },
+          {
+            "name": "from",
+            "required": false,
+            "in": "query",
+            "description": "Start date (ISO string)",
+            "schema": {}
+          },
+          {
+            "name": "format",
+            "required": false,
+            "in": "query",
+            "description": "Export format (default: json)",
+            "schema": {
+              "enum": [
+                "json",
+                "csv"
+              ],
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Audit logs exported successfully."
+          },
+          "401": {
+            "description": "Missing or invalid authentication credentials."
+          }
+        },
+        "security": [
+          {
+            "JWT-auth": []
+          }
+        ],
+        "summary": "Export anonymized audit logs",
+        "tags": [
+          "Audit"
+        ]
+      }
+    },
+    "/api/v1/notifications/outbox": {
+      "get": {
+        "description": "Returns all NotificationOutbox records in pending or enqueued status whose scheduledFor is more than 10 minutes in the past.",
+        "operationId": "OutboxController_listStuck_v1",
+        "parameters": [],
+        "responses": {
+          "200": {
+            "description": "Stuck outbox records returned."
+          },
+          "401": {
+            "description": "Missing or invalid API key."
+          },
+          "403": {
+            "description": "Insufficient role (requires admin or operator)."
+          }
+        },
+        "security": [
+          {
+            "JWT-auth": []
+          }
+        ],
+        "summary": "List stuck notification outbox records",
+        "tags": [
+          "Notifications Outbox"
+        ]
+      }
+    },
+    "/api/v1/notifications/outbox/{id}": {
+      "get": {
+        "description": "Returns the NotificationOutbox record for the given id.",
+        "operationId": "OutboxController_getOne_v1",
+        "parameters": [
+          {
+            "name": "id",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Outbox record returned."
+          },
+          "401": {
+            "description": "Missing or invalid API key."
+          },
+          "403": {
+            "description": "Insufficient role (requires admin or operator)."
+          },
+          "404": {
+            "description": "Outbox record not found."
+          }
+        },
+        "security": [
+          {
+            "JWT-auth": []
+          }
+        ],
+        "summary": "Get a single notification outbox record",
+        "tags": [
+          "Notifications Outbox"
+        ]
+      }
+    },
+    "/api/v1/test-error/generic": {
+      "get": {
+        "operationId": "TestErrorController_getGenericError_v1",
+        "parameters": [],
+        "responses": {
+          "500": {
+            "description": "Generic error triggered."
+          }
+        },
+        "summary": "Trigger a generic Error",
+        "tags": [
+          "Test Error"
+        ]
+      }
+    },
+    "/api/v1/test-error/bad-request": {
+      "get": {
+        "operationId": "TestErrorController_getBadRequest_v1",
+        "parameters": [],
+        "responses": {
+          "400": {
+            "description": "Bad request triggered."
+          }
+        },
+        "summary": "Trigger a BadRequestException",
+        "tags": [
+          "Test Error"
+        ]
+      }
+    },
+    "/api/v1/test-error/internal-server-error": {
+      "get": {
+        "operationId": "TestErrorController_getInternalServerError_v1",
+        "parameters": [],
+        "responses": {
+          "500": {
+            "description": "Internal server error triggered."
+          }
+        },
+        "summary": "Trigger an InternalServerErrorException",
+        "tags": [
+          "Test Error"
+        ]
+      }
+    },
+    "/api/v1/test-error/unauthorized": {
+      "get": {
+        "operationId": "TestErrorController_getUnauthorized_v1",
+        "parameters": [],
+        "responses": {
+          "401": {
+            "description": "Unauthorized error triggered."
+          }
+        },
+        "summary": "Trigger an UnauthorizedException",
+        "tags": [
+          "Test Error"
+        ]
+      }
+    },
+    "/api/v1/test-error/forbidden": {
+      "get": {
+        "operationId": "TestErrorController_getForbidden_v1",
+        "parameters": [],
+        "responses": {
+          "403": {
+            "description": "Forbidden error triggered."
+          }
+        },
+        "summary": "Trigger a ForbiddenException",
+        "tags": [
+          "Test Error"
+        ]
+      }
+    },
+    "/api/v1/test-error/not-found": {
+      "get": {
+        "operationId": "TestErrorController_getNotFound_v1",
+        "parameters": [],
+        "responses": {
+          "404": {
+            "description": "Not found error triggered."
+          }
+        },
+        "summary": "Trigger a NotFoundException",
+        "tags": [
+          "Test Error"
+        ]
+      }
+    },
+    "/api/v1/test-error/validation-error": {
+      "post": {
+        "operationId": "TestErrorController_postValidationError_v1",
+        "parameters": [],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/CreateVerificationDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Validation passed."
+          },
+          "400": {
+            "description": "Validation failed."
+          }
+        },
+        "summary": "Trigger a validation error via Post body",
+        "tags": [
+          "Test Error"
+        ]
+      }
+    },
+    "/api/v1/test-error/prisma-error-simulation": {
+      "get": {
+        "operationId": "TestErrorController_getPrismaErrorSimulation_v1",
+        "parameters": [],
+        "responses": {
+          "500": {
+            "description": "Database error simulated."
+          }
+        },
+        "summary": "Simulate a Prisma database error",
+        "tags": [
+          "Test Error"
+        ]
+      }
+    },
+    "/api/v1/campaigns": {
+      "post": {
+        "operationId": "CampaignsController_create_v1",
+        "parameters": [],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/CreateCampaignDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "Campaign created successfully."
+          },
+          "400": {
+            "description": "Invalid input parameters or malformed request body."
+          },
+          "401": {
+            "description": "Missing or invalid authentication credentials."
+          },
+          "403": {
+            "description": "Access denied - insufficient permissions for this operation."
+          }
+        },
+        "security": [
+          {
+            "JWT-auth": []
+          }
+        ],
+        "summary": "Create a campaign",
+        "tags": [
+          "Campaigns"
+        ]
+      },
+      "get": {
+        "description": "Retrieves campaigns. NGO operators only see their own organization's campaigns.",
+        "operationId": "CampaignsController_list_v1",
+        "parameters": [
+          {
+            "name": "includeArchived",
+            "required": true,
+            "in": "query",
+            "schema": {
+              "type": "boolean"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "List of campaigns retrieved successfully."
+          },
+          "401": {
+            "description": "Missing or invalid authentication credentials."
+          }
+        },
+        "security": [
+          {
+            "JWT-auth": []
+          }
+        ],
+        "summary": "List all campaigns",
+        "tags": [
+          "Campaigns"
+        ]
+      }
+    },
+    "/api/v1/campaigns/{id}": {
+      "get": {
+        "description": "Retrieves metadata and status for a specific campaign.",
+        "operationId": "CampaignsController_get_v1",
+        "parameters": [
+          {
+            "name": "id",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Campaign details retrieved successfully."
+          },
+          "401": {
+            "description": "Missing or invalid authentication credentials."
+          },
+          "404": {
+            "description": "The specified campaign was not found."
+          }
+        },
+        "security": [
+          {
+            "JWT-auth": []
+          }
+        ],
+        "summary": "Get campaign details",
+        "tags": [
+          "Campaigns"
+        ]
+      },
+      "patch": {
+        "description": "Modifies existing campaign properties. Only provided fields are updated.",
+        "operationId": "CampaignsController_update_v1",
+        "parameters": [
+          {
+            "name": "id",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/UpdateCampaignDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Campaign updated successfully."
+          },
+          "400": {
+            "description": "Invalid update data or malformed request body."
+          },
+          "401": {
+            "description": "Missing or invalid authentication credentials."
+          },
+          "403": {
+            "description": "Access denied - insufficient permissions."
+          },
+          "404": {
+            "description": "The specified campaign was not found."
+          }
+        },
+        "security": [
+          {
+            "JWT-auth": []
+          }
+        ],
+        "summary": "Update a campaign",
+        "tags": [
+          "Campaigns"
+        ]
+      }
+    },
+    "/api/v1/campaigns/{id}/archive": {
+      "patch": {
+        "description": "Marks a campaign as archived. Archived campaigns are hidden from general listings.",
+        "operationId": "CampaignsController_archive_v1",
+        "parameters": [
+          {
+            "name": "id",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Campaign archived successfully."
+          },
+          "401": {
+            "description": "Missing or invalid authentication credentials."
+          },
+          "403": {
+            "description": "Access denied - insufficient permissions."
+          },
+          "404": {
+            "description": "The specified campaign was not found."
+          }
+        },
+        "security": [
+          {
+            "JWT-auth": []
+          }
+        ],
+        "summary": "Archive campaign (soft archive)",
+        "tags": [
+          "Campaigns"
+        ]
+      }
+    },
+    "/api/v1/campaigns/{id}/balance": {
+      "get": {
+        "description": "Returns the current locked, disbursed, and available budget for a campaign. Locked balance accounts for all active (non-cancelled, non-disbursed) claims. Cancelled claims release their locked amount back to available.",
+        "operationId": "CampaignsController_getBalance_v1",
+        "parameters": [
+          {
+            "name": "id",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Campaign balance retrieved successfully.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "properties": {
+                    "campaignId": {
+                      "type": "string"
+                    },
+                    "budget": {
+                      "type": "number",
+                      "description": "Total campaign budget."
+                    },
+                    "lockedAmount": {
+                      "type": "number",
+                      "description": "Amount locked by active claims."
+                    },
+                    "disbursedAmount": {
+                      "type": "number",
+                      "description": "Amount already disbursed."
+                    },
+                    "availableBudget": {
+                      "type": "number",
+                      "description": "Remaining available budget."
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Access denied - operator role required."
+          },
+          "404": {
+            "description": "Campaign not found."
+          }
+        },
+        "security": [
+          {
+            "JWT-auth": []
+          }
+        ],
+        "summary": "Get campaign balance summary",
+        "tags": [
+          "Campaigns"
+        ]
+      }
+    },
+    "/api/v1/campaigns/{id}/budget-summary": {
+      "get": {
+        "description": "Returns the total, locked, disbursed, and available budget for a campaign.",
+        "operationId": "CampaignsController_getBudgetSummary_v1",
+        "parameters": [
+          {
+            "name": "id",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Campaign budget summary retrieved successfully.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "properties": {
+                    "campaignId": {
+                      "type": "string"
+                    },
+                    "budget": {
+                      "type": "number"
+                    },
+                    "locked": {
+                      "type": "number"
+                    },
+                    "disbursed": {
+                      "type": "number"
+                    },
+                    "available": {
+                      "type": "number"
+                    }
+                  }
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "JWT-auth": []
+          }
+        ],
+        "summary": "Get campaign budget summary",
+        "tags": [
+          "Campaigns"
+        ]
+      }
+    },
+    "/api/v1/campaigns/export": {
+      "get": {
+        "description": "Exports campaign summaries as CSV with support for date range, status, organization, and pagination filters. Excludes sensitive internal metadata and deleted records.",
+        "operationId": "CampaignsController_exportCampaigns_v1",
+        "parameters": [
+          {
+            "name": "limit",
+            "required": false,
+            "in": "query",
+            "description": "Items per page (default: 50, max: 200)",
+            "schema": {}
+          },
+          {
+            "name": "page",
+            "required": false,
+            "in": "query",
+            "description": "Page number (default: 1)",
+            "schema": {}
+          },
+          {
+            "name": "ngoId",
+            "required": false,
+            "in": "query",
+            "description": "NGO ID filter",
+            "schema": {}
+          },
+          {
+            "name": "orgId",
+            "required": false,
+            "in": "query",
+            "description": "Organization ID filter",
+            "schema": {}
+          },
+          {
+            "name": "status",
+            "required": false,
+            "in": "query",
+            "description": "Campaign status filter",
+            "schema": {}
+          },
+          {
+            "name": "to",
+            "required": false,
+            "in": "query",
+            "description": "End date (ISO string)",
+            "schema": {}
+          },
+          {
+            "name": "from",
+            "required": false,
+            "in": "query",
+            "description": "Start date (ISO string)",
+            "schema": {}
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Campaigns exported successfully.",
+            "content": {
+              "text/csv": {
+                "schema": {
+                  "type": "string"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Missing or invalid authentication credentials."
+          },
+          "403": {
+            "description": "Access denied - operator or admin role required."
+          }
+        },
+        "security": [
+          {
+            "JWT-auth": []
+          }
+        ],
+        "summary": "Export campaigns as CSV",
+        "tags": [
+          "Campaigns"
+        ]
+      }
+    },
+    "/api/v1/claims": {
+      "post": {
+        "description": "Initializes a new claim for a specific campaign.",
+        "operationId": "ClaimsController_create_v1",
+        "parameters": [],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/CreateClaimDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "Claim created successfully.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/CreateClaimDto"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Invalid input parameters."
+          },
+          "404": {
+            "description": "The specified campaign was not found."
+          }
+        },
+        "security": [
+          {
+            "JWT-auth": []
+          }
+        ],
+        "summary": "Create a claim",
+        "tags": [
+          "Onchain Proxy"
+        ]
+      },
+      "get": {
+        "description": "Retrieves a list of all claims across all campaigns.",
+        "operationId": "ClaimsController_findAll_v1",
+        "parameters": [],
+        "responses": {
+          "200": {
+            "description": "List of all claims retrieved successfully."
+          }
+        },
+        "security": [
+          {
+            "JWT-auth": []
+          }
+        ],
+        "summary": "List all claims",
+        "tags": [
+          "Onchain Proxy"
+        ]
+      }
+    },
+    "/api/v1/claims/{id}": {
+      "get": {
+        "description": "Retrieves the current details and status of a specific claim.",
+        "operationId": "ClaimsController_findOne_v1",
+        "parameters": [
+          {
+            "name": "id",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Claim details retrieved successfully."
+          },
+          "404": {
+            "description": "The specified claim was not found."
+          }
+        },
+        "security": [
+          {
+            "JWT-auth": []
+          }
+        ],
+        "summary": "Get claim details",
+        "tags": [
+          "Onchain Proxy"
+        ]
+      }
+    },
+    "/api/v1/claims/{id}/verify": {
+      "post": {
+        "description": "Marks a claim as verified. Requires operator or admin role.",
+        "operationId": "ClaimsController_verify_v1",
+        "parameters": [
+          {
+            "name": "id",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Claim status transitioned to verified successfully."
+          },
+          "400": {
+            "description": "Invalid status transition."
+          },
+          "403": {
+            "description": "Access denied - insufficient permissions."
+          },
+          "404": {
+            "description": "The specified claim was not found."
+          }
+        },
+        "security": [
+          {
+            "JWT-auth": []
+          }
+        ],
+        "summary": "Verify a claim",
+        "tags": [
+          "Onchain Proxy"
+        ]
+      }
+    },
+    "/api/v1/claims/{id}/approve": {
+      "post": {
+        "description": "Approves a verified claim. Requires admin role.",
+        "operationId": "ClaimsController_approve_v1",
+        "parameters": [
+          {
+            "name": "id",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Claim approved successfully (verified → approved)."
+          },
+          "400": {
+            "description": "Invalid status transition."
+          },
+          "403": {
+            "description": "Access denied - admin role required."
+          },
+          "404": {
+            "description": "The specified claim was not found."
+          }
+        },
+        "security": [
+          {
+            "JWT-auth": []
+          }
+        ],
+        "summary": "Approve a claim",
+        "tags": [
+          "Onchain Proxy"
+        ]
+      }
+    },
+    "/api/v1/claims/{id}/disburse": {
+      "post": {
+        "description": "Initiates on-chain disbursement for an approved claim. Requires admin role.",
+        "operationId": "ClaimsController_disburse_v1",
+        "parameters": [
+          {
+            "name": "id",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "On-chain disbursement initiated or completed successfully.",
+            "content": {
+              "application/json": {
+                "examples": {
+                  "success": {
+                    "summary": "Successful on-chain disbursement",
+                    "value": {
+                      "id": "claim_123",
+                      "status": "disbursed",
+                      "transactionHash": "0x123...abc",
+                      "amount": "100.50"
+                    }
+                  },
+                  "pending": {
+                    "summary": "Disbursement pending on-chain",
+                    "value": {
+                      "id": "claim_123",
+                      "status": "disbursing",
+                      "message": "Check back for final transaction hash."
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Invalid status transition or account state."
+          },
+          "403": {
+            "description": "Access denied - admin role required."
+          },
+          "404": {
+            "description": "The specified claim was not found."
+          }
+        },
+        "security": [
+          {
+            "JWT-auth": []
+          }
+        ],
+        "summary": "Disburse funds for a claim",
+        "tags": [
+          "Onchain Proxy"
+        ]
+      }
+    },
+    "/api/v1/claims/{id}/archive": {
+      "patch": {
+        "description": "Soft-archives a claim, hiding it from general listings.",
+        "operationId": "ClaimsController_archive_v1",
+        "parameters": [
+          {
+            "name": "id",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Claim archived successfully."
+          },
+          "400": {
+            "description": "Invalid status transition."
+          },
+          "404": {
+            "description": "The specified claim was not found."
+          }
+        },
+        "security": [
+          {
+            "JWT-auth": []
+          }
+        ],
+        "summary": "Archive a claim",
+        "tags": [
+          "Onchain Proxy"
+        ]
+      }
+    },
+    "/api/v1/claims/{id}/receipt": {
+      "get": {
+        "description": "Generates a shareable receipt for the specified claim.",
+        "operationId": "ClaimsController_getReceipt_v1",
+        "parameters": [
+          {
+            "name": "id",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Claim receipt generated successfully.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ClaimReceiptDto"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "The specified claim was not found."
+          }
+        },
+        "security": [
+          {
+            "JWT-auth": []
+          }
+        ],
+        "summary": "Get claim receipt",
+        "tags": [
+          "Onchain Proxy"
+        ]
+      }
+    },
+    "/api/v1/claims/{id}/receipt/share": {
+      "post": {
+        "description": "Generates and optionally sends the claim receipt via email or SMS.",
+        "operationId": "ClaimsController_shareReceipt_v1",
+        "parameters": [
+          {
+            "name": "id",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/SendReceiptShareDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Receipt generated and sharing initiated successfully.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ClaimShareResponseDto"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Invalid share parameters."
+          },
+          "404": {
+            "description": "The specified claim was not found."
+          }
+        },
+        "security": [
+          {
+            "JWT-auth": []
+          }
+        ],
+        "summary": "Share claim receipt",
+        "tags": [
+          "Onchain Proxy"
+        ]
+      }
+    },
+    "/api/v1/claims/{id}/notes": {
+      "post": {
+        "description": "Adds a secure internal note for staff review only.",
+        "operationId": "ClaimsController_addNote_v1",
+        "parameters": [
+          {
+            "name": "id",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/CreateInternalNoteDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "Internal note added successfully.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/InternalNoteResponseDto"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Access denied - staff role required."
+          }
+        },
+        "security": [
+          {
+            "JWT-auth": []
+          }
+        ],
+        "summary": "Add an internal note to a claim",
+        "tags": [
+          "Onchain Proxy"
+        ]
+      },
+      "get": {
+        "description": "Retrieves all internal notes for a specific claim.",
+        "operationId": "ClaimsController_getNotes_v1",
+        "parameters": [
+          {
+            "name": "id",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Internal notes retrieved successfully.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/InternalNoteResponseDto"
+                  }
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Access denied - staff role required."
+          }
+        },
+        "security": [
+          {
+            "JWT-auth": []
+          }
+        ],
+        "summary": "List internal notes for a claim",
+        "tags": [
+          "Onchain Proxy"
+        ]
+      }
+    },
+    "/api/v1/claims/{id}/cancel": {
+      "post": {
+        "description": "Cancels an active claim (requested / verified / approved). Releases the locked budget back to the campaign and records a full audit trail. Disbursed claims cannot be cancelled.",
+        "operationId": "ClaimsController_cancel_v1",
+        "parameters": [
+          {
+            "name": "id",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/CancelClaimDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Claim cancelled successfully."
+          },
+          "400": {
+            "description": "Claim is already cancelled or in a non-cancellable status."
+          },
+          "403": {
+            "description": "Access denied - operator role required."
+          },
+          "404": {
+            "description": "Claim not found."
+          }
+        },
+        "security": [
+          {
+            "JWT-auth": []
+          }
+        ],
+        "summary": "Cancel a claim",
+        "tags": [
+          "Onchain Proxy"
+        ]
+      }
+    },
+    "/api/v1/claims/{id}/reissue": {
+      "post": {
+        "description": "Atomically cancels the original claim and creates a replacement. The replacement is linked to the original via `reissuedFromId`, preserving the full audit chain. Locked balances are transferred to the new claim — no double-counting occurs. Returns both the cancelled original and the new replacement.",
+        "operationId": "ClaimsController_reissue_v1",
+        "parameters": [
+          {
+            "name": "id",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ReissueClaimDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "Original claim cancelled and replacement created.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "properties": {
+                    "original": {
+                      "type": "object",
+                      "description": "The cancelled original claim."
+                    },
+                    "replacement": {
+                      "type": "object",
+                      "description": "The newly created replacement claim."
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Original claim is not in a cancellable status."
+          },
+          "403": {
+            "description": "Access denied - operator role required."
+          },
+          "404": {
+            "description": "Original claim not found."
+          }
+        },
+        "security": [
+          {
+            "JWT-auth": []
+          }
+        ],
+        "summary": "Cancel and reissue a claim",
+        "tags": [
+          "Onchain Proxy"
+        ]
+      }
+    },
+    "/api/v1/claims/{id}/reissue-history": {
+      "get": {
+        "description": "Returns the full lineage of a claim — the original and every replacement — ordered from oldest to newest. Pass any claim ID in the chain to retrieve the complete history.",
+        "operationId": "ClaimsController_getReissueHistory_v1",
+        "parameters": [
+          {
+            "name": "id",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Reissue chain retrieved successfully.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "type": "object"
+                  }
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Access denied - operator role required."
+          },
+          "404": {
+            "description": "Claim not found."
+          }
+        },
+        "security": [
+          {
+            "JWT-auth": []
+          }
+        ],
+        "summary": "Get reissue chain for a claim",
+        "tags": [
+          "Onchain Proxy"
+        ]
+      }
+    },
+    "/api/v1/claims/export": {
+      "get": {
+        "description": "Exports claim records as CSV with support for date range, status, organization, token, and pagination filters. Excludes sensitive recipient data (recipientRef is encrypted and not exported).",
+        "operationId": "ClaimsController_exportClaims_v1",
+        "parameters": [
+          {
+            "name": "limit",
+            "required": false,
+            "in": "query",
+            "description": "Items per page (default: 50, max: 200)",
+            "schema": {}
+          },
+          {
+            "name": "page",
+            "required": false,
+            "in": "query",
+            "description": "Page number (default: 1)",
+            "schema": {}
+          },
+          {
+            "name": "tokenAddress",
+            "required": false,
+            "in": "query",
+            "description": "Token address filter",
+            "schema": {}
+          },
+          {
+            "name": "orgId",
+            "required": false,
+            "in": "query",
+            "description": "Organization ID filter",
+            "schema": {}
+          },
+          {
+            "name": "campaignId",
+            "required": false,
+            "in": "query",
+            "description": "Campaign ID filter",
+            "schema": {}
+          },
+          {
+            "name": "status",
+            "required": false,
+            "in": "query",
+            "description": "Claim status filter",
+            "schema": {}
+          },
+          {
+            "name": "to",
+            "required": false,
+            "in": "query",
+            "description": "End date (ISO string)",
+            "schema": {}
+          },
+          {
+            "name": "from",
+            "required": false,
+            "in": "query",
+            "description": "Start date (ISO string)",
+            "schema": {}
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Claims exported successfully.",
+            "content": {
+              "text/csv": {
+                "schema": {
+                  "type": "string"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Missing or invalid authentication credentials."
+          },
+          "403": {
+            "description": "Access denied - operator or admin role required."
+          }
+        },
+        "security": [
+          {
+            "JWT-auth": []
+          }
+        ],
+        "summary": "Export claims as CSV",
+        "tags": [
+          "Onchain Proxy"
+        ]
+      }
+    },
+    "/api/v1/analytics/global-stats": {
+      "get": {
+        "description": "Returns aggregated totals and breakdowns by token and region for the dashboard.",
+        "operationId": "AnalyticsController_getGlobalStats_v1",
+        "parameters": [
+          {
+            "name": "from",
+            "required": false,
+            "in": "query",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "to",
+            "required": false,
+            "in": "query",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "region",
+            "required": false,
+            "in": "query",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "token",
+            "required": false,
+            "in": "query",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Global statistics retrieved successfully.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/GlobalStatsDto"
+                }
+              }
+            }
+          }
+        },
+        "summary": "Get global distribution statistics",
+        "tags": [
+          "Analytics"
+        ]
+      }
+    },
+    "/api/v1/analytics/map-data": {
+      "get": {
+        "description": "Returns a list of distribution points with coordinates and amounts for map visualization.",
+        "operationId": "AnalyticsController_getMapData_v1",
+        "parameters": [
+          {
+            "name": "region",
+            "required": false,
+            "in": "query",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "token",
+            "required": false,
+            "in": "query",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "status",
+            "required": false,
+            "in": "query",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Map data points retrieved successfully.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/MapDataDto"
+                }
+              }
+            }
+          }
+        },
+        "summary": "Get map data points",
+        "tags": [
+          "Analytics"
+        ]
+      }
+    },
+    "/api/v1/analytics/map-anonymized": {
+      "get": {
+        "description": "Returns distribution data in GeoJSON format with anonymized locations for privacy.",
+        "operationId": "AnalyticsController_getMapAnonymizedData_v1",
+        "parameters": [
+          {
+            "name": "region",
+            "required": false,
+            "in": "query",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "token",
+            "required": false,
+            "in": "query",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "status",
+            "required": false,
+            "in": "query",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Anonymized GeoJSON data retrieved successfully.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/GeoJsonFeatureCollection"
+                }
+              }
+            }
+          }
+        },
+        "summary": "Get anonymized map data (GeoJSON)",
+        "tags": [
+          "Analytics"
+        ]
+      }
+    },
+    "/api/v1/onchain/aid-escrow/packages": {
+      "post": {
+        "description": "Creates a new aid package with specified recipient, amount, and expiration. Only authorized operators can create packages.",
+        "operationId": "AidEscrowController_createAidPackage_v1",
+        "parameters": [],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/CreateAidPackageDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "Package created successfully.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "example": {
+                    "packageId": "pkg_123456789",
+                    "transactionHash": "ABC123DEF456ABC123DEF456ABC123DEF456ABC123DEF456ABC123DEF456ABCD",
+                    "timestamp": "2026-03-30T12:30:00.000Z",
+                    "status": "success",
+                    "metadata": {
+                      "contractId": "CBAA...",
+                      "operator": "GBUQWP3BOUZX34ULNQG23RQ6F4BFXWBTRSE53XSTE23JMCVOCJGXVSVZ"
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Invalid input parameters."
+          },
+          "500": {
+            "description": "Blockchain transaction failed."
+          }
+        },
+        "security": [
+          {
+            "JWT-auth": []
+          }
+        ],
+        "summary": "Create an aid package",
+        "tags": [
+          "Onchain - Aid Escrow"
+        ]
+      }
+    },
+    "/api/v1/onchain/aid-escrow/packages/batch": {
+      "post": {
+        "description": "Creates multiple aid packages for multiple recipients in a single transaction. More efficient than individual creation.",
+        "operationId": "AidEscrowController_batchCreateAidPackages_v1",
+        "parameters": [],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/BatchCreateAidPackagesDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "Packages created successfully.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "example": {
+                    "packageIds": [
+                      "0",
+                      "1",
+                      "2"
+                    ],
+                    "transactionHash": "ABC123DEF456ABC123DEF456ABC123DEF456ABC123DEF456ABC123DEF456ABCD",
+                    "timestamp": "2026-03-30T12:30:00.000Z",
+                    "status": "success",
+                    "metadata": {
+                      "contractId": "CBAA...",
+                      "count": 3
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Invalid input or mismatched arrays."
+          },
+          "500": {
+            "description": "Blockchain transaction failed."
+          }
+        },
+        "security": [
+          {
+            "JWT-auth": []
+          }
+        ],
+        "summary": "Batch create aid packages",
+        "tags": [
+          "Onchain - Aid Escrow"
+        ]
+      }
+    },
+    "/api/v1/onchain/aid-escrow/packages/{id}/claim": {
+      "post": {
+        "description": "Claims an aid package as the recipient, transferring the funds to their wallet. Can only be claimed once.",
+        "operationId": "AidEscrowController_claimAidPackage_v1",
+        "parameters": [
+          {
+            "name": "id",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Package claimed successfully.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "example": {
+                    "packageId": "pkg_123456789",
+                    "transactionHash": "ABC123DEF456ABC123DEF456ABC123DEF456ABC123DEF456ABC123DEF456ABCD",
+                    "timestamp": "2026-03-30T12:30:00.000Z",
+                    "status": "success",
+                    "amountClaimed": "1000000000",
+                    "metadata": {
+                      "contractId": "CBAA...",
+                      "recipient": "GBUQWP3BOUZX34ULNQG23RQ6F4BFXWBTRSE53XSTE23JMCVOCJGXVSVZ"
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Package not found or not claimable."
+          },
+          "404": {
+            "description": "Package does not exist."
+          },
+          "500": {
+            "description": "Blockchain transaction failed."
+          }
+        },
+        "security": [
+          {
+            "JWT-auth": []
+          }
+        ],
+        "summary": "Claim an aid package",
+        "tags": [
+          "Onchain - Aid Escrow"
+        ]
+      }
+    },
+    "/api/v1/onchain/aid-escrow/packages/{id}/disburse": {
+      "post": {
+        "description": "Disburses an aid package from the admin/operator, transferring funds to the recipient. Admin-only action.",
+        "operationId": "AidEscrowController_disburseAidPackage_v1",
+        "parameters": [
+          {
+            "name": "id",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Package disbursed successfully.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "example": {
+                    "packageId": "pkg_123456789",
+                    "transactionHash": "ABC123DEF456ABC123DEF456ABC123DEF456ABC123DEF456ABC123DEF456ABCD",
+                    "timestamp": "2026-03-30T12:30:00.000Z",
+                    "status": "success",
+                    "amountDisbursed": "1000000000",
+                    "metadata": {
+                      "contractId": "CBAA...",
+                      "operator": "GBUQWP3BOUZX34ULNQG23RQ6F4BFXWBTRSE53XSTE23JMCVOCJGXVSVZ"
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Package not found or not disbursable."
+          },
+          "404": {
+            "description": "Package does not exist."
+          },
+          "500": {
+            "description": "Blockchain transaction failed."
+          }
+        },
+        "security": [
+          {
+            "JWT-auth": []
+          }
+        ],
+        "summary": "Disburse an aid package",
+        "tags": [
+          "Onchain - Aid Escrow"
+        ]
+      }
+    },
+    "/api/v1/onchain/aid-escrow/packages/{id}": {
+      "get": {
+        "description": "Retrieves the full details of an aid package including status, amount, and expiration.",
+        "operationId": "AidEscrowController_getAidPackage_v1",
+        "parameters": [
+          {
+            "name": "id",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Package details retrieved successfully.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "example": {
+                    "package": {
+                      "id": "pkg_123456789",
+                      "recipient": "GBUQWP3BOUZX34ULNQG23RQ6F4BFXWBTRSE53XSTE23JMCVOCJGXVSVZ",
+                      "amount": "1000000000",
+                      "token": "GATEMHCCKCY67ZUCKTROYN24ZYT5GK4EQZ5LKG3FZTSZ3NYNEJBBENSN",
+                      "status": "Created",
+                      "createdAt": 1711814400,
+                      "expiresAt": 1714406400,
+                      "metadata": {
+                        "campaign_ref": "campaign-123"
+                      }
+                    },
+                    "timestamp": "2026-03-30T12:30:00.000Z"
+                  }
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Package not found."
+          },
+          "500": {
+            "description": "Failed to retrieve package."
+          }
+        },
+        "security": [
+          {
+            "JWT-auth": []
+          }
+        ],
+        "summary": "Get aid package details",
+        "tags": [
+          "Onchain - Aid Escrow"
+        ]
+      }
+    },
+    "/api/v1/onchain/aid-escrow/stats": {
+      "get": {
+        "description": "Retrieves aggregated statistics for aid packages by token, including total committed, claimed, and expired amounts.",
+        "operationId": "AidEscrowController_getAidPackageStats_v1",
+        "parameters": [],
+        "responses": {
+          "200": {
+            "description": "Statistics retrieved successfully.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "example": {
+                    "aggregates": {
+                      "totalCommitted": "5000000000",
+                      "totalClaimed": "2000000000",
+                      "totalExpiredCancelled": "500000000"
+                    },
+                    "timestamp": "2026-03-30T12:30:00.000Z"
+                  }
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Invalid token address."
+          },
+          "500": {
+            "description": "Failed to retrieve statistics."
+          }
+        },
+        "security": [
+          {
+            "JWT-auth": []
+          }
+        ],
+        "summary": "Get aid package statistics",
+        "tags": [
+          "Onchain - Aid Escrow"
+        ]
+      }
+    },
+    "/api/v1/onchain/aid-escrow/transactions/{hash}/status": {
+      "get": {
+        "description": "Polls Soroban RPC for the status of a transaction by its hash. Returns a normalized status: pending, succeeded, failed, or unknown.",
+        "operationId": "AidEscrowController_getTransactionStatus_v1",
+        "parameters": [
+          {
+            "name": "hash",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Transaction status retrieved successfully.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "example": {
+                    "hash": "ABC123DEF456ABC123DEF456ABC123DEF456ABC123DEF456ABC123DEF456ABCD",
+                    "status": "succeeded",
+                    "timestamp": "2026-03-30T12:30:00.000Z",
+                    "ledger": 12345
+                  }
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Invalid transaction hash."
+          },
+          "404": {
+            "description": "Transaction not found."
+          },
+          "500": {
+            "description": "Failed to retrieve transaction status."
+          }
+        },
+        "security": [
+          {
+            "JWT-auth": []
+          }
+        ],
+        "summary": "Get transaction status",
+        "tags": [
+          "Onchain - Aid Escrow"
+        ]
+      }
+    },
+    "/api/v1/api-keys": {
+      "post": {
+        "description": "Creates a new API key. The raw key is only returned at creation time; future listings show masked previews only.",
+        "operationId": "ApiKeysController_create_v1",
+        "parameters": [],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/CreateApiKeyDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "API key created."
+          },
+          "400": {
+            "description": "Invalid payload."
+          },
+          "401": {
+            "description": "Missing or invalid credentials."
+          },
+          "403": {
+            "description": "Insufficient permissions."
+          }
+        },
+        "security": [
+          {
+            "JWT-auth": []
+          }
+        ],
+        "summary": "Create an API key (returned once)",
+        "tags": [
+          "API Keys"
+        ]
+      },
+      "get": {
+        "operationId": "ApiKeysController_list_v1",
+        "parameters": [],
+        "responses": {
+          "200": {
+            "description": "API keys listed."
+          }
+        },
+        "security": [
+          {
+            "JWT-auth": []
+          }
+        ],
+        "summary": "List API keys (masked previews only)",
+        "tags": [
+          "API Keys"
+        ]
+      }
+    },
+    "/api/v1/api-keys/{id}/rotate": {
+      "post": {
+        "operationId": "ApiKeysController_rotate_v1",
+        "parameters": [
+          {
+            "name": "id",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "API key rotated."
+          },
+          "400": {
+            "description": "Cannot rotate revoked key."
+          }
+        },
+        "security": [
+          {
+            "JWT-auth": []
+          }
+        ],
+        "summary": "Rotate an API key (revoke old, create new)",
+        "tags": [
+          "API Keys"
+        ]
+      }
+    },
+    "/api/v1/api-keys/{id}/revoke": {
+      "post": {
+        "operationId": "ApiKeysController_revoke_v1",
+        "parameters": [
+          {
+            "name": "id",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/RevokeApiKeyDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "API key revoked."
+          }
+        },
+        "security": [
+          {
+            "JWT-auth": []
+          }
+        ],
+        "summary": "Revoke an API key",
+        "tags": [
+          "API Keys"
+        ]
+      }
+    },
+    "/api/v1/sessions": {
+      "post": {
+        "description": "Create a new verification session with optional multi-step flow definition",
+        "operationId": "SessionController_createSession_v1",
+        "parameters": [],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/CreateSessionDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "Session created successfully",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/SessionResponseDto"
+                }
+              }
+            }
+          }
+        },
+        "summary": "Create a new session",
+        "tags": [
+          "sessions"
+        ]
+      },
+      "get": {
+        "description": "Retrieve sessions filtered by context ID",
+        "operationId": "SessionController_getSessions_v1",
+        "parameters": [
+          {
+            "name": "contextId",
+            "required": false,
+            "in": "query",
+            "description": "Context ID to filter sessions",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Sessions retrieved successfully",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/SessionResponseDto"
+                  }
+                }
+              }
+            }
+          }
+        },
+        "summary": "Get sessions by context",
+        "tags": [
+          "sessions"
+        ]
+      }
+    },
+    "/api/v1/sessions/{id}": {
+      "get": {
+        "description": "Retrieve session details including steps and current status",
+        "operationId": "SessionController_getSession_v1",
+        "parameters": [
+          {
+            "name": "id",
+            "required": true,
+            "in": "path",
+            "description": "Session ID",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Session retrieved successfully",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/SessionResponseDto"
+                }
+              }
+            }
+          }
+        },
+        "summary": "Get session by ID",
+        "tags": [
+          "sessions"
+        ]
+      }
+    },
+    "/api/v1/sessions/{sessionId}/steps/{stepId}/submit": {
+      "post": {
+        "description": "Submit data to a specific step with idempotent handling using submission key",
+        "operationId": "SessionController_submitToStep_v1",
+        "parameters": [
+          {
+            "name": "sessionId",
+            "required": true,
+            "in": "path",
+            "description": "Session ID",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "stepId",
+            "required": true,
+            "in": "path",
+            "description": "Step ID",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/SubmitStepDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Step submission processed successfully",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/SubmissionResponseDto"
+                }
+              }
+            }
+          }
+        },
+        "summary": "Submit data to a session step",
+        "tags": [
+          "sessions"
+        ]
+      }
+    },
+    "/api/v1/sessions/{id}/resume": {
+      "post": {
+        "description": "Resume an expired or paused session",
+        "operationId": "SessionController_resumeSession_v1",
+        "parameters": [
+          {
+            "name": "id",
+            "required": true,
+            "in": "path",
+            "description": "Session ID",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Session resumed successfully",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/SessionResponseDto"
+                }
+              }
+            }
+          }
+        },
+        "summary": "Resume a session",
+        "tags": [
+          "sessions"
+        ]
+      }
+    },
+    "/api/v1/evidence/upload": {
+      "post": {
+        "description": "Encrypts and stores a single evidence file locally for eventual upload. Accepts one file (max 10MB) in the \"file\" field. Allowed types: image/jpeg, image/png, image/gif, application/pdf, text/plain.",
+        "operationId": "EvidenceController_upload_v1",
+        "parameters": [],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "multipart/form-data": {
+              "schema": {
+                "type": "object",
+                "required": [
+                  "file"
+                ],
+                "properties": {
+                  "file": {
+                    "type": "string",
+                    "format": "binary"
+                  }
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "Evidence queued successfully."
+          }
+        },
+        "security": [
+          {
+            "JWT-auth": []
+          }
+        ],
+        "summary": "Upload evidence to queue",
+        "tags": [
+          "Evidence Queue"
+        ]
+      }
+    },
+    "/api/v1/evidence/queue": {
+      "get": {
+        "description": "Retrieves all evidence items in the queue for the current user.",
+        "operationId": "EvidenceController_getQueue_v1",
+        "parameters": [],
+        "responses": {
+          "200": {
+            "description": "Queue retrieved successfully."
+          }
+        },
+        "security": [
+          {
+            "JWT-auth": []
+          }
+        ],
+        "summary": "List evidence queue",
+        "tags": [
+          "Evidence Queue"
+        ]
+      }
+    },
+    "/api/v1/evidence/queue/{id}/retry": {
+      "post": {
+        "description": "Manually triggers a retry for a failed evidence upload.",
+        "operationId": "EvidenceController_retry_v1",
+        "parameters": [
+          {
+            "name": "id",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Retry initiated."
+          }
+        },
+        "security": [
+          {
+            "JWT-auth": []
+          }
+        ],
+        "summary": "Retry evidence upload",
+        "tags": [
+          "Evidence Queue"
+        ]
+      }
+    },
+    "/api/v1/evidence/queue/{id}": {
+      "delete": {
+        "description": "Removes an evidence item from the queue and deletes the local file.",
+        "operationId": "EvidenceController_remove_v1",
+        "parameters": [
+          {
+            "name": "id",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Item removed successfully."
+          }
+        },
+        "security": [
+          {
+            "JWT-auth": []
+          }
+        ],
+        "summary": "Remove from queue",
+        "tags": [
+          "Evidence Queue"
+        ]
+      }
+    },
+    "/api/v1/evidence/upload-sessions": {
+      "post": {
+        "operationId": "UploadSessionController_create_v1",
+        "parameters": [],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/CreateUploadSessionDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "Session created."
+          }
+        },
+        "security": [
+          {
+            "JWT-auth": []
+          }
+        ],
+        "summary": "Create a chunked upload session",
+        "tags": [
+          "Evidence Upload Sessions"
+        ]
+      }
+    },
+    "/api/v1/evidence/upload-sessions/{id}/chunks": {
+      "post": {
+        "operationId": "UploadSessionController_uploadChunk_v1",
+        "parameters": [
+          {
+            "name": "id",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "multipart/form-data": {
+              "schema": {
+                "$ref": "#/components/schemas/UploadChunkDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Chunk received."
+          }
+        },
+        "security": [
+          {
+            "JWT-auth": []
+          }
+        ],
+        "summary": "Upload a single chunk",
+        "tags": [
+          "Evidence Upload Sessions"
+        ]
+      }
+    },
+    "/api/v1/evidence/upload-sessions/{id}/finalize": {
+      "post": {
+        "operationId": "UploadSessionController_finalize_v1",
+        "parameters": [
+          {
+            "name": "id",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Evidence queued."
+          }
+        },
+        "security": [
+          {
+            "JWT-auth": []
+          }
+        ],
+        "summary": "Finalize session and assemble evidence file",
+        "tags": [
+          "Evidence Upload Sessions"
+        ]
+      }
+    },
+    "/api/v1/evidence/upload-sessions/{id}/status": {
+      "get": {
+        "operationId": "UploadSessionController_status_v1",
+        "parameters": [
+          {
+            "name": "id",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Session status."
+          }
+        },
+        "security": [
+          {
+            "JWT-auth": []
+          }
+        ],
+        "summary": "Get received chunks (for resume)",
+        "tags": [
+          "Evidence Upload Sessions"
+        ]
+      }
+    },
+    "/api/v1/retention-policy": {
+      "post": {
+        "description": "Defines a retention window and purge strategy for a specific entity type.",
+        "operationId": "RetentionPolicyController_create_v1",
+        "parameters": [],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/CreateRetentionPolicyDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": ""
+          }
+        },
+        "security": [
+          {
+            "JWT-auth": []
+          }
+        ],
+        "summary": "Create a retention policy",
+        "tags": [
+          "Retention Policy"
+        ]
+      },
+      "get": {
+        "description": "Returns all configured retention policies, ordered by entity.",
+        "operationId": "RetentionPolicyController_findAll_v1",
+        "parameters": [
+          {
+            "name": "entity",
+            "required": false,
+            "in": "query",
+            "description": "Filter by entity name",
+            "schema": {}
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": ""
+          }
+        },
+        "security": [
+          {
+            "JWT-auth": []
+          }
+        ],
+        "summary": "List all retention policies",
+        "tags": [
+          "Retention Policy"
+        ]
+      }
+    },
+    "/api/v1/retention-policy/entities": {
+      "get": {
+        "description": "Returns the list of entity types that support retention policies.",
+        "operationId": "RetentionPolicyController_getSupportedEntities_v1",
+        "parameters": [],
+        "responses": {
+          "200": {
+            "description": ""
+          }
+        },
+        "security": [
+          {
+            "JWT-auth": []
+          }
+        ],
+        "summary": "List supported entity names",
+        "tags": [
+          "Retention Policy"
+        ]
+      }
+    },
+    "/api/v1/retention-policy/{id}": {
+      "get": {
+        "operationId": "RetentionPolicyController_findOne_v1",
+        "parameters": [
+          {
+            "name": "id",
+            "required": true,
+            "in": "path",
+            "description": "Retention policy ID",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": ""
+          }
+        },
+        "security": [
+          {
+            "JWT-auth": []
+          }
+        ],
+        "summary": "Get a single retention policy",
+        "tags": [
+          "Retention Policy"
+        ]
+      },
+      "put": {
+        "description": "Partially update a retention policy. Changes take effect on the next purge run.",
+        "operationId": "RetentionPolicyController_update_v1",
+        "parameters": [
+          {
+            "name": "id",
+            "required": true,
+            "in": "path",
+            "description": "Retention policy ID",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/UpdateRetentionPolicyDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": ""
+          }
+        },
+        "security": [
+          {
+            "JWT-auth": []
+          }
+        ],
+        "summary": "Update a retention policy",
+        "tags": [
+          "Retention Policy"
+        ]
+      },
+      "delete": {
+        "description": "Removes a retention policy. The entity will no longer be purged automatically.",
+        "operationId": "RetentionPolicyController_remove_v1",
+        "parameters": [
+          {
+            "name": "id",
+            "required": true,
+            "in": "path",
+            "description": "Retention policy ID",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": ""
+          }
+        },
+        "security": [
+          {
+            "JWT-auth": []
+          }
+        ],
+        "summary": "Delete a retention policy",
+        "tags": [
+          "Retention Policy"
+        ]
+      }
+    },
+    "/api/v1/retention-policy/purge": {
+      "post": {
+        "description": "Manually trigger a retention purge for all enabled policies. Each purge produces an audit event recording the number of records affected.",
+        "operationId": "RetentionPolicyController_executePurge_v1",
+        "parameters": [],
+        "responses": {
+          "201": {
+            "description": ""
+          }
+        },
+        "security": [
+          {
+            "JWT-auth": []
+          }
+        ],
+        "summary": "Trigger a purge run",
+        "tags": [
+          "Retention Policy"
+        ]
+      }
+    },
+    "/api/v1/retention-policy/seed": {
+      "post": {
+        "description": "Creates default retention policies for all supported entities if they do not already exist.",
+        "operationId": "RetentionPolicyController_seedDefaults_v1",
+        "parameters": [],
+        "responses": {
+          "201": {
+            "description": ""
+          }
+        },
+        "security": [
+          {
+            "JWT-auth": []
+          }
+        ],
+        "summary": "Seed default retention policies",
+        "tags": [
+          "Retention Policy"
+        ]
+      }
+    },
+    "/api/v1/orgs/{id}/invites": {
+      "post": {
+        "operationId": "InvitesController_createInvite_v1",
+        "parameters": [
+          {
+            "name": "id",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "201": {
+            "description": ""
+          }
+        },
+        "tags": [
+          "Invites"
+        ]
+      },
+      "get": {
+        "operationId": "InvitesController_listInvites_v1",
+        "parameters": [
+          {
+            "name": "id",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": ""
+          }
+        },
+        "tags": [
+          "Invites"
+        ]
+      }
+    },
+    "/api/v1/invites/{id}/accept": {
+      "post": {
+        "operationId": "InvitesController_acceptInvite_v1",
+        "parameters": [
+          {
+            "name": "id",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "201": {
+            "description": ""
+          }
+        },
+        "tags": [
+          "Invites"
+        ]
+      }
+    },
+    "/api/v1/invites/{id}": {
+      "delete": {
+        "operationId": "InvitesController_revokeInvite_v1",
+        "parameters": [
+          {
+            "name": "id",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": ""
+          }
+        },
+        "tags": [
+          "Invites"
+        ]
+      }
+    },
+    "/api/v1/admin/search": {
+      "get": {
+        "operationId": "AdminSearchController_search_v1",
+        "parameters": [
+          {
+            "name": "q",
+            "required": true,
+            "in": "query",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "entity",
+            "required": true,
+            "in": "query",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": ""
+          }
+        },
+        "tags": [
+          "AdminSearch"
+        ]
+      }
+    },
+    "/api/v1/entity-linking/link": {
+      "post": {
+        "description": "Create a link between an extracted entity and a canonical registry record with confidence scoring",
+        "operationId": "EntityLinkingController_linkEntity_v1",
+        "parameters": [],
+        "responses": {
+          "201": {
+            "description": ""
+          }
+        },
+        "security": [
+          {
+            "JWT-auth": []
+          }
+        ],
+        "summary": "Link extracted entity to canonical registry",
+        "tags": [
+          "Entity Linking"
+        ]
+      }
+    },
+    "/api/v1/entity-linking/links": {
+      "get": {
+        "description": "Search and filter entity links by various criteria",
+        "operationId": "EntityLinkingController_queryLinks_v1",
+        "parameters": [
+          {
+            "name": "limit",
+            "required": false,
+            "in": "query",
+            "schema": {
+              "type": "number"
+            }
+          },
+          {
+            "name": "page",
+            "required": false,
+            "in": "query",
+            "schema": {
+              "type": "number"
+            }
+          },
+          {
+            "name": "isActive",
+            "required": false,
+            "in": "query",
+            "schema": {
+              "type": "boolean"
+            }
+          },
+          {
+            "name": "minConfidence",
+            "required": false,
+            "in": "query",
+            "schema": {
+              "type": "number"
+            }
+          },
+          {
+            "name": "entityType",
+            "required": false,
+            "in": "query",
+            "schema": {
+              "enum": [
+                "organization",
+                "location",
+                "asset",
+                "project"
+              ],
+              "type": "string"
+            }
+          },
+          {
+            "name": "sourceId",
+            "required": false,
+            "in": "query",
+            "schema": {}
+          },
+          {
+            "name": "sourceType",
+            "required": false,
+            "in": "query",
+            "schema": {
+              "enum": [
+                "campaign",
+                "claim",
+                "verification"
+              ],
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": ""
+          }
+        },
+        "security": [
+          {
+            "JWT-auth": []
+          }
+        ],
+        "summary": "Query entity links",
+        "tags": [
+          "Entity Linking"
+        ]
+      }
+    },
+    "/api/v1/entity-linking/campaign/{campaignId}": {
+      "get": {
+        "description": "Retrieve all entity links associated with a specific campaign",
+        "operationId": "EntityLinkingController_getLinksByCampaign_v1",
+        "parameters": [
+          {
+            "name": "campaignId",
+            "required": true,
+            "in": "path",
+            "description": "Campaign ID",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "entityType",
+            "required": false,
+            "in": "query",
+            "schema": {
+              "enum": [
+                "organization",
+                "location",
+                "asset",
+                "project"
+              ],
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": ""
+          }
+        },
+        "security": [
+          {
+            "JWT-auth": []
+          }
+        ],
+        "summary": "Get entity links by campaign",
+        "tags": [
+          "Entity Linking"
+        ]
+      }
+    },
+    "/api/v1/entity-linking/claim/{claimId}": {
+      "get": {
+        "description": "Retrieve all entity links associated with a specific claim",
+        "operationId": "EntityLinkingController_getLinksByClaim_v1",
+        "parameters": [
+          {
+            "name": "claimId",
+            "required": true,
+            "in": "path",
+            "description": "Claim ID",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "entityType",
+            "required": false,
+            "in": "query",
+            "schema": {
+              "enum": [
+                "organization",
+                "location",
+                "asset",
+                "project"
+              ],
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": ""
+          }
+        },
+        "security": [
+          {
+            "JWT-auth": []
+          }
+        ],
+        "summary": "Get entity links by claim",
+        "tags": [
+          "Entity Linking"
+        ]
+      }
+    },
+    "/api/v1/entity-linking/verification/{verificationId}": {
+      "get": {
+        "description": "Retrieve all entity links associated with a specific verification",
+        "operationId": "EntityLinkingController_getLinksByVerification_v1",
+        "parameters": [
+          {
+            "name": "verificationId",
+            "required": true,
+            "in": "path",
+            "description": "Verification ID",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "entityType",
+            "required": false,
+            "in": "query",
+            "schema": {
+              "enum": [
+                "organization",
+                "location",
+                "asset",
+                "project"
+              ],
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": ""
+          }
+        },
+        "security": [
+          {
+            "JWT-auth": []
+          }
+        ],
+        "summary": "Get entity links by verification",
+        "tags": [
+          "Entity Linking"
+        ]
+      }
+    },
+    "/api/v1/entity-linking/review/{linkId}": {
+      "patch": {
+        "description": "Manually review and curate an entity link",
+        "operationId": "EntityLinkingController_reviewLink_v1",
+        "parameters": [
+          {
+            "name": "linkId",
+            "required": true,
+            "in": "path",
+            "description": "Entity Link ID",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": ""
+          }
+        },
+        "security": [
+          {
+            "JWT-auth": []
+          }
+        ],
+        "summary": "Review and update entity link",
+        "tags": [
+          "Entity Linking"
+        ]
+      }
+    },
+    "/api/v1/entity-linking/registry/search": {
+      "get": {
+        "description": "Search for potential matches in the canonical registry",
+        "operationId": "EntityLinkingController_searchRegistry_v1",
+        "parameters": [
+          {
+            "name": "entityType",
+            "required": true,
+            "in": "query",
+            "schema": {
+              "enum": [
+                "organization",
+                "location",
+                "asset",
+                "project"
+              ],
+              "type": "string"
+            }
+          },
+          {
+            "name": "query",
+            "required": true,
+            "in": "query",
+            "description": "Search query",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "limit",
+            "required": false,
+            "in": "query",
+            "schema": {
+              "type": "number"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": ""
+          }
+        },
+        "security": [
+          {
+            "JWT-auth": []
+          }
+        ],
+        "summary": "Search canonical registry",
+        "tags": [
+          "Entity Linking"
+        ]
+      }
+    },
+    "/api/v1/deployment-metadata": {
+      "post": {
+        "description": "Creates a new contract deployment metadata record. Used to record contract deployments with their network, address, and provenance.",
+        "operationId": "DeploymentMetadataController_create_v1",
+        "parameters": [],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/CreateDeploymentMetadataDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "Deployment metadata created successfully.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/DeploymentMetadataResponseDto"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Invalid input parameters."
+          },
+          "500": {
+            "description": "Failed to create deployment metadata."
+          }
+        },
+        "security": [
+          {
+            "JWT-auth": []
+          }
+        ],
+        "summary": "Create deployment metadata (admin only)",
+        "tags": [
+          "Deployment Metadata"
+        ]
+      },
+      "get": {
+        "description": "Returns all contract deployment metadata records, ordered by deployment date (newest first).",
+        "operationId": "DeploymentMetadataController_findAll_v1",
+        "parameters": [],
+        "responses": {
+          "200": {
+            "description": "Deployment metadata records.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/DeploymentMetadataResponseDto"
+                  }
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "JWT-auth": []
+          }
+        ],
+        "summary": "List all deployment metadata (admin only)",
+        "tags": [
+          "Deployment Metadata"
+        ]
+      }
+    },
+    "/api/v1/deployment-metadata/by-network/{network}": {
+      "get": {
+        "description": "Returns all contract deployments for a specific network (e.g., testnet, mainnet).",
+        "operationId": "DeploymentMetadataController_findByNetwork_v1",
+        "parameters": [
+          {
+            "name": "network",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Deployment metadata for the specified network.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/DeploymentMetadataResponseDto"
+                  }
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "No deployments found for this network."
+          }
+        },
+        "security": [
+          {
+            "JWT-auth": []
+          }
+        ],
+        "summary": "Get deployment metadata by network (admin only)",
+        "tags": [
+          "Deployment Metadata"
+        ]
+      }
+    },
+    "/api/v1/deployment-metadata/by-contract/{network}/{contractName}": {
+      "get": {
+        "description": "Returns the latest deployment metadata for a specific contract on a specific network.",
+        "operationId": "DeploymentMetadataController_findByNetworkAndContractName_v1",
+        "parameters": [
+          {
+            "name": "network",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "contractName",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Deployment metadata for the specified contract.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/DeploymentMetadataResponseDto"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Deployment metadata not found."
+          }
+        },
+        "security": [
+          {
+            "JWT-auth": []
+          }
+        ],
+        "summary": "Get deployment metadata by network and contract name (admin only)",
+        "tags": [
+          "Deployment Metadata"
+        ]
+      }
+    },
+    "/api/v1/deployment-metadata/by-contract-id/{contractId}": {
+      "get": {
+        "description": "Returns deployment metadata for a specific contract ID (address).",
+        "operationId": "DeploymentMetadataController_findByContractId_v1",
+        "parameters": [
+          {
+            "name": "contractId",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Deployment metadata for the specified contract ID.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/DeploymentMetadataResponseDto"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Deployment metadata not found."
+          }
+        },
+        "security": [
+          {
+            "JWT-auth": []
+          }
+        ],
+        "summary": "Get deployment metadata by contract ID (admin only)",
+        "tags": [
+          "Deployment Metadata"
+        ]
+      }
+    },
+    "/api/v1/deployment-metadata/{id}": {
+      "put": {
+        "description": "Updates an existing deployment metadata record.",
+        "operationId": "DeploymentMetadataController_update_v1",
+        "parameters": [
+          {
+            "name": "id",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/UpdateDeploymentMetadataDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Deployment metadata updated successfully.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/DeploymentMetadataResponseDto"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Invalid input parameters."
+          },
+          "404": {
+            "description": "Deployment metadata not found."
+          }
+        },
+        "security": [
+          {
+            "JWT-auth": []
+          }
+        ],
+        "summary": "Update deployment metadata (admin only)",
+        "tags": [
+          "Deployment Metadata"
+        ]
+      },
+      "delete": {
+        "description": "Deletes a deployment metadata record.",
+        "operationId": "DeploymentMetadataController_delete_v1",
+        "parameters": [
+          {
+            "name": "id",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "404": {
+            "description": "Deployment metadata not found."
+          }
+        },
+        "security": [
+          {
+            "JWT-auth": []
+          }
+        ],
+        "summary": "Delete deployment metadata (admin only)",
+        "tags": [
+          "Deployment Metadata"
+        ]
+      }
+    },
+    "/api/v1/admin/sandbox/seed/tenant": {
+      "post": {
+        "operationId": "SandboxController_seedTenant_v1",
+        "parameters": [],
+        "responses": {
+          "201": {
+            "description": ""
+          }
+        },
+        "tags": [
+          "Sandbox"
+        ]
+      }
+    },
+    "/api/v1/admin/sandbox/seed/campaigns": {
+      "post": {
+        "operationId": "SandboxController_seedCampaigns_v1",
+        "parameters": [],
+        "responses": {
+          "201": {
+            "description": ""
+          }
+        },
+        "tags": [
+          "Sandbox"
+        ]
+      }
+    },
+    "/api/v1/admin/sandbox/seed/claims": {
+      "post": {
+        "operationId": "SandboxController_seedClaims_v1",
+        "parameters": [],
+        "responses": {
+          "201": {
+            "description": ""
+          }
+        },
+        "tags": [
+          "Sandbox"
+        ]
+      }
+    },
+    "/api/v1/admin/sandbox/seed": {
+      "post": {
+        "operationId": "SandboxController_seedAll_v1",
+        "parameters": [],
+        "responses": {
+          "201": {
+            "description": ""
+          }
+        },
+        "tags": [
+          "Sandbox"
+        ]
+      },
+      "delete": {
+        "operationId": "SandboxController_resetSeed_v1",
+        "parameters": [],
+        "responses": {
+          "200": {
+            "description": ""
+          }
+        },
+        "tags": [
+          "Sandbox"
+        ]
+      }
+    }
+  },
+  "info": {
+    "title": "ChainForge API",
+    "description": "API documentation for ChainForge platform - Humanitarian aid and verification system\n\n## API Versioning\n\nThis API uses URI-based versioning. The current version is **v1**.\n\n### Version Format\nAll endpoints are prefixed with the version number: `/api/v1/...`\n\n### Supported Versions\n| Version | Status | Description |\n|---------|--------|-------------|\n| v1 | Current | Active version with full support |\n\n### Deprecation Policy\n- Deprecated endpoints will be marked with `@Deprecated` in the documentation\n- Deprecated versions will be supported for at least 6 months after deprecation notice\n- Clients will receive deprecation warnings via the `Sunset` HTTP header\n- Migration guides will be provided for major version changes\n\n### Future Versions\nWhen new versions are released:\n- New endpoints will be available at `/api/v2/...`, etc.\n- Previous versions remain accessible during the deprecation period\n- Clients should monitor the API documentation for version updates",
+    "version": "1.0",
+    "contact": {}
+  },
+  "tags": [],
+  "servers": [
+    {
+      "url": "http://localhost:3000",
+      "description": "Local Development"
+    },
+    {
+      "url": "https://api.chainforge.app",
+      "description": "Staging"
+    },
+    {
+      "url": "https://api.chainforge.app",
+      "description": "Production"
+    }
+  ],
+  "components": {
+    "securitySchemes": {
+      "JWT-auth": {
+        "scheme": "bearer",
+        "bearerFormat": "JWT",
+        "type": "http",
+        "name": "Authorization",
+        "in": "header",
+        "description": "Enter JWT token"
+      },
+      "api-key": {
+        "type": "apiKey",
+        "in": "header",
+        "name": "x-api-key",
+        "description": "API key for external access"
+      }
+    },
+    "schemas": {
+      "AiTaskWebhookDto": {
+        "type": "object",
+        "properties": {
+          "taskId": {
+            "type": "string",
+            "description": "The ID of the task",
+            "example": "task-123-abc"
+          },
+          "deliveryId": {
+            "type": "string",
+            "description": "Unique delivery ID to prevent duplicate processing",
+            "example": "del_12345abcde"
+          },
+          "timestamp": {
+            "type": "string",
+            "description": "Timestamp of the event generation for state ordering",
+            "example": "2024-03-24T10:30:00Z"
+          },
+          "status": {
+            "type": "string",
+            "description": "Status of the task",
+            "enum": [
+              "pending",
+              "processing",
+              "completed",
+              "failed"
+            ],
+            "example": "completed"
+          },
+          "result": {
+            "type": "object",
+            "description": "Result of the task execution",
+            "example": {
+              "prediction": "approved",
+              "confidence": 0.95
+            }
+          },
+          "error": {
+            "type": "string",
+            "description": "Error message if task failed",
+            "example": "Image processing failed: invalid format"
+          },
+          "taskType": {
+            "type": "string",
+            "description": "Type of the task",
+            "example": "image_analysis"
+          },
+          "completedAt": {
+            "type": "string",
+            "description": "Timestamp when the task completed",
+            "example": "2024-03-24T10:30:00Z"
+          }
+        },
+        "required": [
+          "taskId",
+          "deliveryId",
+          "timestamp",
+          "status"
+        ]
+      },
+      "StartVerificationDto": {
+        "type": "object",
+        "properties": {
+          "channel": {
+            "type": "string",
+            "description": "Verification channel: email or phone",
+            "enum": [
+              "email",
+              "phone"
+            ],
+            "example": "email"
+          },
+          "email": {
+            "type": "string",
+            "description": "Email address (required when channel is email)",
+            "example": "user@example.com"
+          },
+          "phone": {
+            "type": "string",
+            "description": "Phone number (required when channel is phone)",
+            "example": "+15551234567"
+          }
+        },
+        "required": [
+          "channel"
+        ]
+      },
+      "ResendVerificationDto": {
+        "type": "object",
+        "properties": {
+          "sessionId": {
+            "type": "string",
+            "description": "Verification session ID returned from start",
+            "example": "clv789xyz123"
+          }
+        },
+        "required": [
+          "sessionId"
+        ]
+      },
+      "CompleteVerificationDto": {
+        "type": "object",
+        "properties": {
+          "sessionId": {
+            "type": "string",
+            "description": "Unique identifier for the current verification session.",
+            "example": "ses_123abc456def"
+          },
+          "code": {
+            "type": "string",
+            "description": "OTP code received via email or phone",
+            "example": "123456",
+            "minLength": 4,
+            "maxLength": 8
+          }
+        },
+        "required": [
+          "sessionId",
+          "code"
+        ]
+      },
+      "CreateVerificationDto": {
+        "type": "object",
+        "properties": {
+          "userId": {
+            "type": "string",
+            "description": "User submitting the verification",
+            "example": "clu456def789"
+          },
+          "documentType": {
+            "type": "string",
+            "description": "Document type being submitted",
+            "example": "NATIONAL_ID"
+          },
+          "submittedAt": {
+            "format": "date-time",
+            "type": "string",
+            "description": "Timestamp when the verification request was submitted.",
+            "example": "2025-01-23T11:00:00.000Z"
+          }
+        },
+        "required": [
+          "userId",
+          "documentType"
+        ]
+      },
+      "CreateInternalNoteDto": {
+        "type": "object",
+        "properties": {
+          "content": {
+            "type": "string",
+            "description": "The content of the internal note.",
+            "example": "Investigation shows that the recipient has provided valid evidence."
+          },
+          "category": {
+            "type": "string",
+            "description": "Optional category for the note.",
+            "example": "investigation"
+          }
+        },
+        "required": [
+          "content"
+        ]
+      },
+      "InternalNoteResponseDto": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string",
+            "example": "clv789xyz123"
+          },
+          "entityType": {
+            "type": "string",
+            "example": "claim"
+          },
+          "entityId": {
+            "type": "string",
+            "example": "clv789xyz123"
+          },
+          "content": {
+            "type": "string",
+            "example": "Investigation notes..."
+          },
+          "authorId": {
+            "type": "string",
+            "example": "clv789xyz123"
+          },
+          "category": {
+            "type": "object",
+            "example": "investigation",
+            "nullable": true
+          },
+          "createdAt": {
+            "format": "date-time",
+            "type": "string",
+            "example": "2025-01-23T11:00:00.000Z"
+          },
+          "updatedAt": {
+            "format": "date-time",
+            "type": "string",
+            "example": "2025-01-23T11:00:00.000Z"
+          }
+        },
+        "required": [
+          "id",
+          "entityType",
+          "entityId",
+          "content",
+          "authorId",
+          "createdAt",
+          "updatedAt"
+        ]
+      },
+      "CampaignStatus": {
+        "type": "string",
+        "enum": [
+          "draft",
+          "active",
+          "paused",
+          "completed",
+          "archived"
+        ],
+        "description": "Current status of the campaign."
+      },
+      "CreateCampaignDto": {
+        "type": "object",
+        "properties": {
+          "name": {
+            "type": "string",
+            "description": "Campaign title/name.",
+            "example": "Winter Relief 2026"
+          },
+          "budget": {
+            "type": "number",
+            "description": "Total budget allocated to the campaign.",
+            "example": 25000.5,
+            "minimum": 0
+          },
+          "metadata": {
+            "type": "object",
+            "description": "Arbitrary campaign metadata (e.g., region, location, target audience).",
+            "example": {
+              "region": "Lagos",
+              "partner": "NGO-A",
+              "notes": "Phase 1"
+            },
+            "additionalProperties": true
+          },
+          "status": {
+            "description": "Current status of the campaign.",
+            "example": "draft",
+            "allOf": [
+              {
+                "$ref": "#/components/schemas/CampaignStatus"
+              }
+            ]
+          }
+        },
+        "required": [
+          "name",
+          "budget"
+        ]
+      },
+      "UpdateCampaignDto": {
+        "type": "object",
+        "properties": {
+          "name": {
+            "type": "string",
+            "description": "Updated campaign title/name.",
+            "example": "Winter Relief 2026 - Extended"
+          },
+          "budget": {
+            "type": "number",
+            "description": "Updated campaign budget.",
+            "example": 30000,
+            "minimum": 0
+          },
+          "metadata": {
+            "type": "object",
+            "description": "Updated campaign metadata.",
+            "example": {
+              "region": "Lagos",
+              "partner": "NGO-B"
+            },
+            "additionalProperties": true
+          },
+          "status": {
+            "description": "Updated campaign status.",
+            "example": "active",
+            "allOf": [
+              {
+                "$ref": "#/components/schemas/CampaignStatus"
+              }
+            ]
+          }
+        }
+      },
+      "CreateClaimDto": {
+        "type": "object",
+        "properties": {
+          "campaignId": {
+            "type": "string",
+            "description": "ID of the campaign this claim belongs to",
+            "example": "campaign-uuid"
+          },
+          "amount": {
+            "type": "number",
+            "description": "Amount requested in the claim",
+            "example": 100.5,
+            "minimum": 0
+          },
+          "recipientRef": {
+            "type": "string",
+            "description": "Reference to the recipient",
+            "example": "recipient-123"
+          },
+          "tokenAddress": {
+            "type": "string",
+            "description": "Stellar token address (asset issuer or contract ID) for the distribution",
+            "example": "GATEMHCCKCY67ZUCKTROYN24ZYT5GK4EQZ5LKG3FZTSZ3NYNEJBBENSN"
+          },
+          "evidenceRef": {
+            "type": "string",
+            "description": "Reference or link to evidence supporting the claim (e.g., photo, document hash).",
+            "example": "evidence-456"
+          },
+          "expiresAt": {
+            "format": "date-time",
+            "type": "string",
+            "description": "When the claim should automatically expire if it remains unprocessed.",
+            "example": "2026-05-31T23:59:59.000Z"
+          }
+        },
+        "required": [
+          "campaignId",
+          "amount",
+          "recipientRef",
+          "tokenAddress"
+        ]
+      },
+      "ClaimReceiptDto": {
+        "type": "object",
+        "properties": {
+          "claimId": {
+            "type": "string",
+            "description": "Unique claim identifier",
+            "example": "claim-uuid-123"
+          },
+          "packageId": {
+            "type": "string",
+            "description": "Campaign/package ID",
+            "example": "campaign-uuid-456"
+          },
+          "status": {
+            "type": "string",
+            "description": "Current status of the claim",
+            "enum": [
+              "requested",
+              "verified",
+              "approved",
+              "disbursed",
+              "archived",
+              "cancelled"
+            ],
+            "example": "disbursed"
+          },
+          "amount": {
+            "type": "number",
+            "description": "Token amount for the claim",
+            "example": 100.5
+          },
+          "timestamp": {
+            "type": "string",
+            "description": "ISO timestamp of claim creation",
+            "example": "2024-01-15T10:30:00Z"
+          },
+          "tokenAddress": {
+            "type": "string",
+            "description": "Stellar token address (optional)",
+            "example": "GATEMHCCKCY67ZUCKTROYN24ZYT5GK4EQZ5LKG3FZTSZ3NYNEJBBENSN"
+          },
+          "recipientRef": {
+            "type": "string",
+            "description": "Recipient reference (optional)",
+            "example": "recipient-ref-789"
+          }
+        },
+        "required": [
+          "claimId",
+          "packageId",
+          "status",
+          "amount",
+          "timestamp"
+        ]
+      },
+      "SendReceiptShareDto": {
+        "type": "object",
+        "properties": {
+          "emailAddresses": {
+            "description": "Email address(es) to send receipt to",
+            "example": [
+              "recipient@example.com"
+            ],
+            "type": "array",
+            "items": {
+              "type": "array"
+            }
+          },
+          "phoneNumbers": {
+            "description": "Phone number(s) to send receipt to (SMS)",
+            "example": [
+              "+1234567890"
+            ],
+            "type": "array",
+            "items": {
+              "type": "array"
+            }
+          },
+          "channel": {
+            "type": "string",
+            "description": "Channel for sharing",
+            "enum": [
+              "email",
+              "sms",
+              "inline"
+            ],
+            "example": "email"
+          },
+          "message": {
+            "type": "string",
+            "description": "Custom message to include with receipt (optional)"
+          }
+        },
+        "required": [
+          "emailAddresses",
+          "phoneNumbers",
+          "channel"
+        ]
+      },
+      "ClaimShareResponseDto": {
+        "type": "object",
+        "properties": {
+          "receiptData": {
+            "type": "string",
+            "description": "Base64-encoded receipt image or data"
+          },
+          "mimeType": {
+            "type": "string",
+            "description": "MIME type of the receipt data",
+            "example": "text/plain"
+          },
+          "filename": {
+            "type": "string",
+            "description": "Filename for download",
+            "example": "claim-receipt-uuid.txt"
+          },
+          "text": {
+            "type": "string",
+            "description": "Text representation of receipt for sharing"
+          }
+        },
+        "required": [
+          "receiptData",
+          "mimeType",
+          "filename",
+          "text"
+        ]
+      },
+      "CancelClaimDto": {
+        "type": "object",
+        "properties": {
+          "operatorId": {
+            "type": "string",
+            "description": "ID of the operator performing the cancellation.",
+            "example": "operator-uuid"
+          },
+          "reason": {
+            "type": "string",
+            "description": "Human-readable reason for cancellation.",
+            "example": "Recipient relocated; package no longer applicable.",
+            "maxLength": 500
+          }
+        },
+        "required": [
+          "operatorId"
+        ]
+      },
+      "ReissueClaimDto": {
+        "type": "object",
+        "properties": {
+          "operatorId": {
+            "type": "string",
+            "description": "ID of the operator performing the reissue.",
+            "example": "operator-uuid"
+          },
+          "amount": {
+            "type": "number",
+            "description": "Override amount for the replacement package. Defaults to the original amount when omitted.",
+            "example": 750,
+            "minimum": 0
+          },
+          "recipientRef": {
+            "type": "string",
+            "description": "Override recipient reference for the replacement package.",
+            "example": "recipient-ref-new"
+          },
+          "reason": {
+            "type": "string",
+            "description": "Human-readable reason for the reissue.",
+            "example": "Corrected amount after field verification.",
+            "maxLength": 500
+          }
+        },
+        "required": [
+          "operatorId"
+        ]
+      },
+      "BreakdownEntry": {
+        "type": "object",
+        "properties": {
+          "label": {
+            "type": "string",
+            "example": "USDC"
+          },
+          "totalAmount": {
+            "type": "number",
+            "example": 1500.5
+          },
+          "count": {
+            "type": "number",
+            "example": 45
+          }
+        },
+        "required": [
+          "label",
+          "totalAmount",
+          "count"
+        ]
+      },
+      "TimeframeBucket": {
+        "type": "object",
+        "properties": {
+          "date": {
+            "type": "string",
+            "example": "2026-03-01"
+          },
+          "totalAmount": {
+            "type": "number",
+            "example": 500
+          },
+          "count": {
+            "type": "number",
+            "example": 10
+          }
+        },
+        "required": [
+          "date",
+          "totalAmount",
+          "count"
+        ]
+      },
+      "GlobalStatsDto": {
+        "type": "object",
+        "properties": {
+          "totalAidDisbursed": {
+            "type": "number",
+            "example": 250000
+          },
+          "totalRecipients": {
+            "type": "number",
+            "example": 1250
+          },
+          "activeCampaigns": {
+            "type": "number",
+            "example": 12
+          },
+          "byToken": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/BreakdownEntry"
+            }
+          },
+          "byRegion": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/BreakdownEntry"
+            }
+          },
+          "timeSeries": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/TimeframeBucket"
+            }
+          },
+          "computedAt": {
+            "type": "string",
+            "example": "2026-03-30T10:00:00Z"
+          }
+        },
+        "required": [
+          "totalAidDisbursed",
+          "totalRecipients",
+          "activeCampaigns",
+          "byToken",
+          "byRegion",
+          "timeSeries",
+          "computedAt"
+        ]
+      },
+      "MapDataPoint": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string",
+            "example": "pkg-123"
+          },
+          "lat": {
+            "type": "number",
+            "example": 6.5244
+          },
+          "lng": {
+            "type": "number",
+            "example": 3.3792
+          },
+          "amount": {
+            "type": "number",
+            "example": 100
+          },
+          "token": {
+            "type": "string",
+            "example": "USDC"
+          },
+          "status": {
+            "type": "string",
+            "example": "delivered"
+          },
+          "region": {
+            "type": "string",
+            "example": "Lagos"
+          }
+        },
+        "required": [
+          "id",
+          "lat",
+          "lng",
+          "amount",
+          "token",
+          "status",
+          "region"
+        ]
+      },
+      "MapDataDto": {
+        "type": "object",
+        "properties": {
+          "points": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/MapDataPoint"
+            }
+          },
+          "computedAt": {
+            "type": "string",
+            "example": "2026-03-30T10:00:00Z"
+          }
+        },
+        "required": [
+          "points",
+          "computedAt"
+        ]
+      },
+      "GeoJsonFeature": {
+        "type": "object",
+        "properties": {
+          "type": {
+            "type": "string",
+            "example": "Feature"
+          },
+          "geometry": {
+            "type": "object",
+            "example": {
+              "type": "Point",
+              "coordinates": [
+                3.3792,
+                6.5244
+              ]
+            }
+          },
+          "properties": {
+            "type": "object"
+          }
+        },
+        "required": [
+          "type",
+          "geometry",
+          "properties"
+        ]
+      },
+      "GeoJsonFeatureCollection": {
+        "type": "object",
+        "properties": {
+          "type": {
+            "type": "string",
+            "example": "FeatureCollection"
+          },
+          "features": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/GeoJsonFeature"
+            }
+          },
+          "computedAt": {
+            "type": "string",
+            "example": "2026-03-30T10:00:00Z"
+          }
+        },
+        "required": [
+          "type",
+          "features",
+          "computedAt"
+        ]
+      },
+      "CreateAidPackageDto": {
+        "type": "object",
+        "properties": {
+          "packageId": {
+            "type": "string",
+            "description": "Unique identifier for the package",
+            "example": "pkg_123456789"
+          },
+          "recipientAddress": {
+            "type": "string",
+            "description": "Stellar address of the aid recipient",
+            "example": "GBUQWP3BOUZX34ULNQG23RQ6F4BFXWBTRSE53XSTE23JMCVOCJGXVSVZ"
+          },
+          "amount": {
+            "type": "string",
+            "description": "Amount in stroops (i128 as string to preserve precision)",
+            "example": "1000000000"
+          },
+          "tokenAddress": {
+            "type": "string",
+            "description": "Stellar token address",
+            "example": "GATEMHCCKCY67ZUCKTROYN24ZYT5GK4EQZ5LKG3FZTSZ3NYNEJBBENSN"
+          },
+          "expiresAt": {
+            "type": "number",
+            "description": "Unix timestamp when the package expires",
+            "example": 1704067200
+          },
+          "metadata": {
+            "type": "object",
+            "description": "Optional metadata as key-value pairs",
+            "example": {
+              "campaign_ref": "campaign-123",
+              "region": "LATAM"
+            }
+          }
+        },
+        "required": [
+          "packageId",
+          "recipientAddress",
+          "amount",
+          "tokenAddress",
+          "expiresAt"
+        ]
+      },
+      "BatchCreateAidPackagesDto": {
+        "type": "object",
+        "properties": {
+          "recipientAddresses": {
+            "description": "Array of recipient Stellar addresses",
+            "example": [
+              "GBUQWP3BOUZX34ULNQG23RQ6F4BFXWBTRSE53XSTE23JMCVOCJGXVSVZ",
+              "GA5ZSEJYB37JRC5AVCIA5MOP4GZ5DA47EL5QRUVLYEK2OOABEXVR5CV7"
+            ],
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          },
+          "amounts": {
+            "description": "Array of amounts (in stroops, as strings)",
+            "example": [
+              "1000000000",
+              "500000000"
+            ],
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          },
+          "tokenAddress": {
+            "type": "string",
+            "description": "Stellar token address",
+            "example": "GATEMHCCKCY67ZUCKTROYN24ZYT5GK4EQZ5LKG3FZTSZ3NYNEJBBENSN"
+          },
+          "expiresIn": {
+            "type": "number",
+            "description": "Duration in seconds from now until expiration",
+            "example": 2592000
+          },
+          "metadata": {
+            "type": "object",
+            "description": "Optional metadata as key-value pairs"
+          }
+        },
+        "required": [
+          "recipientAddresses",
+          "amounts",
+          "tokenAddress",
+          "expiresIn"
+        ]
+      },
+      "CreateApiKeyDto": {
+        "type": "object",
+        "properties": {
+          "role": {
+            "type": "string",
+            "enum": [
+              "admin",
+              "operator",
+              "client",
+              "ngo"
+            ],
+            "description": "Role associated with this API key.",
+            "example": "operator"
+          },
+          "ngoId": {
+            "type": "string",
+            "description": "Optional NGO scope for this key (required for NGO role).",
+            "example": "ngo_123"
+          },
+          "description": {
+            "type": "string",
+            "description": "Human-friendly description of the key purpose.",
+            "example": "Onchain worker (prod)"
+          }
+        },
+        "required": [
+          "role"
+        ]
+      },
+      "RevokeApiKeyDto": {
+        "type": "object",
+        "properties": {
+          "reason": {
+            "type": "string",
+            "description": "Optional reason for revocation.",
+            "example": "compromised"
+          }
+        }
+      },
+      "SessionStepDefinitionDto": {
+        "type": "object",
+        "properties": {
+          "stepName": {
+            "type": "string",
+            "description": "Name of the step"
+          },
+          "stepOrder": {
+            "type": "number",
+            "description": "Order of the step in the flow"
+          },
+          "maxAttempts": {
+            "type": "number",
+            "description": "Maximum attempts allowed for this step"
+          },
+          "input": {
+            "type": "object",
+            "description": "Initial input data for the step"
+          }
+        },
+        "required": [
+          "stepName",
+          "stepOrder"
+        ]
+      },
+      "CreateSessionDto": {
+        "type": "object",
+        "properties": {
+          "type": {
+            "type": "string",
+            "enum": [
+              "otp_verification",
+              "claim_verification",
+              "multi_step_verification"
+            ],
+            "description": "Type of session to create"
+          },
+          "contextId": {
+            "type": "string",
+            "description": "Context identifier (e.g., claim ID, user ID)"
+          },
+          "metadata": {
+            "type": "object",
+            "description": "Additional metadata for the session"
+          },
+          "expiresAt": {
+            "type": "string",
+            "description": "Session expiration time"
+          },
+          "steps": {
+            "description": "Steps to create for multi-step sessions",
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/SessionStepDefinitionDto"
+            }
+          }
+        },
+        "required": [
+          "type"
+        ]
+      },
+      "SessionStepResponseDto": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string"
+          },
+          "stepName": {
+            "type": "string"
+          },
+          "stepOrder": {
+            "type": "number"
+          },
+          "status": {
+            "type": "string",
+            "enum": [
+              "pending",
+              "in_progress",
+              "completed",
+              "failed",
+              "skipped"
+            ]
+          },
+          "input": {
+            "type": "object"
+          },
+          "output": {
+            "type": "object"
+          },
+          "error": {
+            "type": "string"
+          },
+          "attempts": {
+            "type": "number"
+          },
+          "maxAttempts": {
+            "type": "number"
+          },
+          "startedAt": {
+            "format": "date-time",
+            "type": "string"
+          },
+          "completedAt": {
+            "format": "date-time",
+            "type": "string"
+          },
+          "createdAt": {
+            "format": "date-time",
+            "type": "string"
+          },
+          "updatedAt": {
+            "format": "date-time",
+            "type": "string"
+          }
+        },
+        "required": [
+          "id",
+          "stepName",
+          "stepOrder",
+          "status",
+          "attempts",
+          "maxAttempts",
+          "createdAt",
+          "updatedAt"
+        ]
+      },
+      "SessionResponseDto": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string"
+          },
+          "type": {
+            "type": "string",
+            "enum": [
+              "otp_verification",
+              "claim_verification",
+              "multi_step_verification"
+            ]
+          },
+          "status": {
+            "type": "string",
+            "enum": [
+              "pending",
+              "completed",
+              "expired",
+              "failed"
+            ]
+          },
+          "contextId": {
+            "type": "string"
+          },
+          "metadata": {
+            "type": "object"
+          },
+          "expiresAt": {
+            "format": "date-time",
+            "type": "string"
+          },
+          "createdAt": {
+            "format": "date-time",
+            "type": "string"
+          },
+          "updatedAt": {
+            "format": "date-time",
+            "type": "string"
+          },
+          "completedAt": {
+            "format": "date-time",
+            "type": "string"
+          },
+          "failedAt": {
+            "format": "date-time",
+            "type": "string"
+          },
+          "steps": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/SessionStepResponseDto"
+            }
+          },
+          "currentStep": {
+            "$ref": "#/components/schemas/SessionStepResponseDto"
+          },
+          "nextStep": {
+            "$ref": "#/components/schemas/SessionStepResponseDto"
+          }
+        },
+        "required": [
+          "id",
+          "type",
+          "status",
+          "createdAt",
+          "updatedAt"
+        ]
+      },
+      "SubmitStepDto": {
+        "type": "object",
+        "properties": {
+          "submissionKey": {
+            "type": "string",
+            "description": "Unique key for idempotent submission"
+          },
+          "payload": {
+            "type": "object",
+            "description": "Step input data"
+          },
+          "stepName": {
+            "type": "string",
+            "description": "Optional step name to target specific step"
+          }
+        },
+        "required": [
+          "submissionKey",
+          "payload"
+        ]
+      },
+      "SubmissionResponseDto": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string"
+          },
+          "sessionId": {
+            "type": "string"
+          },
+          "stepId": {
+            "type": "string"
+          },
+          "submissionKey": {
+            "type": "string"
+          },
+          "payload": {
+            "type": "object"
+          },
+          "response": {
+            "type": "object"
+          },
+          "createdAt": {
+            "format": "date-time",
+            "type": "string"
+          },
+          "isIdempotent": {
+            "type": "boolean"
+          }
+        },
+        "required": [
+          "id",
+          "sessionId",
+          "submissionKey",
+          "payload",
+          "createdAt",
+          "isIdempotent"
+        ]
+      },
+      "CreateUploadSessionDto": {
+        "type": "object",
+        "properties": {}
+      },
+      "UploadChunkDto": {
+        "type": "object",
+        "properties": {}
+      },
+      "CreateRetentionPolicyDto": {
+        "type": "object",
+        "properties": {
+          "entity": {
+            "type": "string",
+            "description": "Entity type this policy applies to (e.g. AuditLog, VerificationSession, Session, Claim)",
+            "example": "AuditLog"
+          },
+          "retentionDays": {
+            "type": "number",
+            "description": "Number of days to retain records before purging",
+            "example": 90
+          },
+          "strategy": {
+            "type": "string",
+            "description": "Purge strategy: soft_delete, hard_delete, or anonymize",
+            "enum": [
+              "soft_delete",
+              "hard_delete",
+              "anonymize"
+            ],
+            "default": "soft_delete"
+          },
+          "enabled": {
+            "type": "boolean",
+            "description": "Whether the policy is active",
+            "default": true
+          },
+          "description": {
+            "type": "string",
+            "description": "Human-readable description of the policy"
+          }
+        },
+        "required": [
+          "entity",
+          "retentionDays"
+        ]
+      },
+      "UpdateRetentionPolicyDto": {
+        "type": "object",
+        "properties": {
+          "entity": {
+            "type": "string",
+            "description": "Entity type this policy applies to (e.g. AuditLog, VerificationSession, Session, Claim)",
+            "example": "AuditLog"
+          },
+          "retentionDays": {
+            "type": "number",
+            "description": "Number of days to retain records before purging",
+            "example": 90
+          },
+          "strategy": {
+            "type": "string",
+            "description": "Purge strategy: soft_delete, hard_delete, or anonymize",
+            "enum": [
+              "soft_delete",
+              "hard_delete",
+              "anonymize"
+            ],
+            "default": "soft_delete"
+          },
+          "enabled": {
+            "type": "boolean",
+            "description": "Whether the policy is active",
+            "default": true
+          },
+          "description": {
+            "type": "string",
+            "description": "Human-readable description of the policy"
+          }
+        }
+      },
+      "CreateDeploymentMetadataDto": {
+        "type": "object",
+        "properties": {}
+      },
+      "DeploymentMetadataResponseDto": {
+        "type": "object",
+        "properties": {}
+      },
+      "UpdateDeploymentMetadataDto": {
+        "type": "object",
+        "properties": {}
+      }
+    }
+  }
+}

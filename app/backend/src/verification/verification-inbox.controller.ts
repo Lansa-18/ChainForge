@@ -17,6 +17,7 @@ import {
   ApiParam,
   ApiQuery,
   ApiBearerAuth,
+  ApiBody,
   ApiOkResponse,
   ApiBadRequestResponse,
   ApiUnauthorizedResponse,
@@ -164,6 +165,15 @@ export class VerificationInboxController {
   @ApiBadRequestResponse({
     description: 'Invalid request or verification already processed.',
   })
+  @ApiBody({
+    schema: {
+      type: 'object',
+      properties: {
+        nextStepMessage: { type: 'string' },
+        internalNote: { type: 'string' },
+      },
+    },
+  })
   async approve(
     @Param('id') id: string,
     @Body() body: { nextStepMessage?: string; internalNote?: string },
@@ -211,6 +221,17 @@ export class VerificationInboxController {
   })
   @ApiBadRequestResponse({
     description: 'Invalid request or verification already processed.',
+  })
+  @ApiBody({
+    schema: {
+      type: 'object',
+      required: ['rejectionReason'],
+      properties: {
+        rejectionReason: { type: 'string' },
+        nextStepMessage: { type: 'string' },
+        internalNote: { type: 'string' },
+      },
+    },
   })
   async reject(
     @Param('id') id: string,
@@ -264,6 +285,17 @@ export class VerificationInboxController {
   })
   @ApiBadRequestResponse({
     description: 'Invalid request or verification already processed.',
+  })
+  @ApiBody({
+    schema: {
+      type: 'object',
+      required: ['rejectionReason', 'nextStepMessage'],
+      properties: {
+        rejectionReason: { type: 'string' },
+        nextStepMessage: { type: 'string' },
+        internalNote: { type: 'string' },
+      },
+    },
   })
   async requestResubmission(
     @Param('id') id: string,
@@ -352,6 +384,16 @@ export class VerificationInboxController {
   })
   @ApiNotFoundResponse({
     description: 'The specified verification request was not found.',
+  })
+  @ApiBody({
+    schema: {
+      type: 'object',
+      required: ['content'],
+      properties: {
+        content: { type: 'string' },
+        category: { type: 'string' },
+      },
+    },
   })
   async addInternalNote(
     @Param('id') id: string,

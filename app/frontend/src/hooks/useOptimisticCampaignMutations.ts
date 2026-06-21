@@ -1,20 +1,11 @@
 'use client';
 
 import { useMutation, useQueryClient } from '@tanstack/react-query';
-import { fetchClient } from '@/lib/mock-api/client';
-import type { Campaign, CampaignStatus, CampaignUpdatePayload } from '@/types/campaign';
+import { apiClient } from '@/lib/api-client';
+import type { Campaign, CampaignStatus } from '@/types/campaign';
 import { useToast } from '@/components/ToastProvider';
 
-const API_URL = process.env.NEXT_PUBLIC_API_URL ?? 'http://localhost:4000';
-
-interface ApiResponse<T> {
-  success: boolean;
-  message?: string;
-  data?: T;
-  error?: unknown;
-}
-
-export type CampaignAction = 
+export type CampaignAction =
   | { type: 'pause'; targetStatus: 'paused' }
   | { type: 'resume'; targetStatus: 'active' }
   | { type: 'archive'; targetStatus: 'archived' }
@@ -30,26 +21,20 @@ const ACTION_CONFIG: Record<CampaignAction['type'], { targetStatus: CampaignStat
 };
 
 async function updateCampaignStatus(
-  id: string, 
-  status: CampaignStatus
+  id: string,
+  status: CampaignStatus,
 ): Promise<Campaign> {
-  const res = await fetchClient(`${API_URL}/campaigns/${id}`, {
-    method: 'PATCH',
-    headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({ status } as CampaignUpdatePayload),
+  const { data, error } = await apiClient.PATCH('/api/v1/campaigns/{id}', {
+    params: { path: { id } },
+    body: { status } as never,
   });
 
-  if (!res.ok) {
-    const body = await res.json();
-    throw new Error(body?.message ?? `Failed to update campaign: ${res.status}`);
+  if (error) {
+    throw new Error((error as { message?: string }).message ?? 'Failed to update campaign');
   }
 
-  const body = (await res.json()) as ApiResponse<Campaign>;
-  if (!body.success) {
-    throw new Error(body.message ?? 'Failed to update campaign');
-  }
-
-  return body.data as Campaign;
+  const result = data as unknown as { data?: Campaign } | Campaign | null;
+  return (result && 'data' in result ? result.data : result) as Campaign;
 }
 
 interface MutationVariables {

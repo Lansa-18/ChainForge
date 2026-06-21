@@ -1,33 +1,31 @@
 'use client';
 
 import { useQuery } from '@tanstack/react-query';
-import { fetchClient } from '@/lib/mock-api/client';
+import { apiClient } from '@/lib/api-client';
 import type {
   BackendHealthResponse,
   HealthState,
   HealthStatusResult,
 } from '@/types/health';
 
-const API_URL = process.env.NEXT_PUBLIC_API_URL ?? 'http://localhost:4000';
-
 /** Polling interval: 30 seconds — reasonable for a health badge */
 const POLL_INTERVAL_MS = 30_000;
 
 async function fetchHealth(): Promise<BackendHealthResponse> {
   const controller = new AbortController();
-  const timeoutId = setTimeout(() => controller.abort(), 8_000); // 8 s timeout
+  const timeoutId = setTimeout(() => controller.abort(), 8_000);
 
   try {
-    const response = await fetchClient(`${API_URL}/health`, {
+    const { data, error } = await apiClient.GET('/api/v1/health', {
       signal: controller.signal,
       cache: 'no-store',
-    });
+    } as Parameters<typeof apiClient.GET>[1]);
 
-    if (!response.ok) {
-      throw new Error(`Server responded with ${response.status}`);
+    if (error) {
+      throw new Error(`Server responded with an error`);
     }
 
-    return response.json() as Promise<BackendHealthResponse>;
+    return data as BackendHealthResponse;
   } finally {
     clearTimeout(timeoutId);
   }
@@ -45,10 +43,6 @@ function deriveState(
   return 'down';
 }
 
-/**
- * Hook that polls the backend /health endpoint every 30 seconds.
- * Returns a HealthStatusResult — state, raw data, error, and last-checked time.
- */
 export function useHealthStatus(): HealthStatusResult {
   const { data, error, isLoading, dataUpdatedAt } = useQuery<
     BackendHealthResponse,

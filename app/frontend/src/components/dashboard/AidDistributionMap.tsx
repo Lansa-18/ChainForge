@@ -4,12 +4,11 @@ import React, { useEffect, useMemo, useState } from 'react';
 import Link from 'next/link';
 import { MapContainer, Marker, Popup, TileLayer, useMapEvents } from 'react-leaflet';
 import L from 'leaflet';
-import { fetchClient } from '@/lib/mock-api/client';
+import { apiClient } from '@/lib/api-client';
 import { getAppUserRole, isOperationsRole } from '@/lib/app-role';
 
 const DEFAULT_CENTER: [number, number] = [20, 0];
 const DEFAULT_ZOOM = 2;
-const API_URL = process.env.NEXT_PUBLIC_API_URL ?? 'http://localhost:4000';
 
 const STATUS_STYLES: Record<string, string> = {
   delivered: 'aid-marker--delivered',
@@ -144,16 +143,18 @@ export default function AidDistributionMap() {
     async function loadData() {
       try {
         setLoading(true);
-        const response = await fetchClient(`${API_URL}/analytics/map-data`);
-        if (!response.ok) {
-          throw new Error(`Request failed: ${response.status}`);
+        const { data: payload, error } = await apiClient.GET('/api/v1/analytics/map-data');
+        if (error) {
+          throw new Error(`Request failed`);
         }
-        const payload: unknown = await response.json();
-        const rawPoints = Array.isArray(payload)
-          ? payload
-          : payload && typeof payload === 'object' && Array.isArray((payload as { data?: unknown }).data)
-            ? (payload as { data: unknown[] }).data
-            : [];
+        const responseBody = payload as unknown;
+        const rawPoints = Array.isArray(responseBody)
+          ? responseBody
+          : responseBody && typeof responseBody === 'object' && Array.isArray((responseBody as Record<string, unknown>).points)
+            ? (responseBody as { points: unknown[] }).points
+            : responseBody && typeof responseBody === 'object' && Array.isArray((responseBody as Record<string, unknown>).data)
+              ? (responseBody as { data: unknown[] }).data
+              : [];
         const normalized = rawPoints
           .map(normalizePoint)
           .filter((item): item is AidPackagePoint => Boolean(item));

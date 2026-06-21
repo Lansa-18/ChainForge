@@ -34,6 +34,8 @@ export class CreateCampaignDto {
     description:
       'Arbitrary campaign metadata (e.g., region, location, target audience).',
     example: { region: 'Lagos', partner: 'NGO-A', notes: 'Phase 1' },
+    type: 'object',
+    additionalProperties: true,
   })
   @IsOptional()
   @IsObject()

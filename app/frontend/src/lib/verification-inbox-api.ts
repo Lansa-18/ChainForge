@@ -1,5 +1,5 @@
-import { fetchClient } from '@/lib/mock-api/client';
 import { withRetry } from '@/lib/retry';
+import { apiClient } from '@/lib/api-client';
 import type {
   VerificationInboxResponse,
   VerificationInboxItem,
@@ -8,55 +8,59 @@ import type {
   ReviewFilters,
 } from '@/types/verification-review';
 
-const API_URL = process.env.NEXT_PUBLIC_API_URL ?? 'http://localhost:4000';
-const BASE = `${API_URL}/v1/verification-inbox`;
-
-function buildParams(filters: Partial<ReviewFilters>): string {
-  const p = new URLSearchParams();
-  if (filters.status) p.set('status', filters.status);
-  if (filters.page && filters.page > 1) p.set('page', String(filters.page));
-  if (filters.dateFrom) p.set('dateFrom', filters.dateFrom);
-  if (filters.dateTo) p.set('dateTo', filters.dateTo);
-  const q = p.toString();
-  return q ? `?${q}` : '';
-}
-
 export async function fetchInbox(
   filters: Partial<ReviewFilters>,
 ): Promise<VerificationInboxResponse> {
-  const res = await withRetry(() => fetchClient(`${BASE}${buildParams(filters)}`));
-  if (!res.ok) throw new Error(`Failed to fetch inbox: ${res.status}`);
-  return res.json() as Promise<VerificationInboxResponse>;
+  const { data, error } = await withRetry(() =>
+    apiClient.GET('/api/v1/verification-inbox', {
+      params: {
+        query: {
+          status: filters.status || undefined,
+          page: filters.page && filters.page > 1 ? filters.page : undefined,
+          dateFrom: filters.dateFrom || undefined,
+          dateTo: filters.dateTo || undefined,
+        },
+      },
+    }),
+  );
+  if (error) throw new Error((error as { message?: string }).message ?? 'Failed to fetch inbox');
+  return data as VerificationInboxResponse;
 }
 
 export async function fetchStats(): Promise<VerificationStats> {
-  const res = await withRetry(() => fetchClient(`${BASE}/stats`));
-  if (!res.ok) throw new Error(`Failed to fetch stats: ${res.status}`);
-  return res.json() as Promise<VerificationStats>;
+  const { data, error } = await withRetry(() =>
+    apiClient.GET('/api/v1/verification-inbox/stats'),
+  );
+  if (error) throw new Error((error as { message?: string }).message ?? 'Failed to fetch stats');
+  return data as VerificationStats;
 }
 
 export async function fetchDetails(id: string): Promise<VerificationInboxItem> {
-  const res = await withRetry(() => fetchClient(`${BASE}/${id}`));
-  if (!res.ok) throw new Error(`Failed to fetch verification: ${res.status}`);
-  return res.json() as Promise<VerificationInboxItem>;
+  const { data, error } = await withRetry(() =>
+    apiClient.GET('/api/v1/verification-inbox/{id}', {
+      params: { path: { id } },
+    }),
+  );
+  if (error) throw new Error((error as { message?: string }).message ?? 'Failed to fetch verification');
+  return data as VerificationInboxItem;
 }
 
 export async function approveVerification(
   id: string,
   payload: { nextStepMessage?: string; internalNote?: string },
 ): Promise<VerificationInboxItem> {
-  const res = await withRetry(() => fetchClient(`${BASE}/${id}/approve`, {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify(payload),
-  }));
-  if (!res.ok) {
-    const body = await res.json().catch(() => ({}));
+  const { data, error } = await withRetry(() =>
+    apiClient.POST('/api/v1/verification-inbox/{id}/approve', {
+      params: { path: { id } },
+      body: payload,
+    }),
+  );
+  if (error) {
     throw new Error(
-      (body as { message?: string }).message ?? `Approve failed: ${res.status}`,
+      (error as { message?: string }).message ?? `Approve failed`,
     );
   }
-  return res.json() as Promise<VerificationInboxItem>;
+  return data as VerificationInboxItem;
 }
 
 export async function rejectVerification(
@@ -67,18 +71,18 @@ export async function rejectVerification(
     internalNote?: string;
   },
 ): Promise<VerificationInboxItem> {
-  const res = await withRetry(() => fetchClient(`${BASE}/${id}/reject`, {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify(payload),
-  }));
-  if (!res.ok) {
-    const body = await res.json().catch(() => ({}));
+  const { data, error } = await withRetry(() =>
+    apiClient.POST('/api/v1/verification-inbox/{id}/reject', {
+      params: { path: { id } },
+      body: payload,
+    }),
+  );
+  if (error) {
     throw new Error(
-      (body as { message?: string }).message ?? `Reject failed: ${res.status}`,
+      (error as { message?: string }).message ?? `Reject failed`,
     );
   }
-  return res.json() as Promise<VerificationInboxItem>;
+  return data as VerificationInboxItem;
 }
 
 export async function requestResubmission(
@@ -89,42 +93,44 @@ export async function requestResubmission(
     internalNote?: string;
   },
 ): Promise<VerificationInboxItem> {
-  const res = await withRetry(() => fetchClient(`${BASE}/${id}/request-resubmission`, {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify(payload),
-  }));
-  if (!res.ok) {
-    const body = await res.json().catch(() => ({}));
+  const { data, error } = await withRetry(() =>
+    apiClient.POST('/api/v1/verification-inbox/{id}/request-resubmission', {
+      params: { path: { id } },
+      body: payload,
+    }),
+  );
+  if (error) {
     throw new Error(
-      (body as { message?: string }).message ??
-        `Resubmission request failed: ${res.status}`,
+      (error as { message?: string }).message ?? `Resubmission request failed`,
     );
   }
-  return res.json() as Promise<VerificationInboxItem>;
+  return data as VerificationInboxItem;
 }
 
 export async function fetchNotes(id: string): Promise<InternalNote[]> {
-  const res = await withRetry(() => fetchClient(`${BASE}/${id}/notes`));
-  if (!res.ok) throw new Error(`Failed to fetch notes: ${res.status}`);
-  return res.json() as Promise<InternalNote[]>;
+  const { data, error } = await withRetry(() =>
+    apiClient.GET('/api/v1/verification-inbox/{id}/notes', {
+      params: { path: { id } },
+    }),
+  );
+  if (error) throw new Error((error as { message?: string }).message ?? 'Failed to fetch notes');
+  return (data ?? []) as InternalNote[];
 }
 
 export async function addNote(
   id: string,
   payload: { content: string; category?: string },
 ): Promise<InternalNote> {
-  const res = await withRetry(() => fetchClient(`${BASE}/${id}/notes`, {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify(payload),
-  }));
-  if (!res.ok) {
-    const body = await res.json().catch(() => ({}));
+  const { data, error } = await withRetry(() =>
+    apiClient.POST('/api/v1/verification-inbox/{id}/notes', {
+      params: { path: { id } },
+      body: payload,
+    }),
+  );
+  if (error) {
     throw new Error(
-      (body as { message?: string }).message ??
-        `Add note failed: ${res.status}`,
+      (error as { message?: string }).message ?? `Add note failed`,
     );
   }
-  return res.json() as Promise<InternalNote>;
+  return data as InternalNote;
 }

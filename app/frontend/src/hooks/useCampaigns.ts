@@ -1,7 +1,7 @@
 'use client';
 
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
-import { fetchClient } from '@/lib/mock-api/client';
+import { apiClient } from '@/lib/api-client';
 import type {
   Campaign,
   CampaignCreatePayload,
@@ -9,67 +9,39 @@ import type {
 } from '@/types/campaign';
 import { useActivity } from './useActivity';
 
-const API_URL = process.env.NEXT_PUBLIC_API_URL ?? 'http://localhost:4000';
-
-interface ApiResponse<T> {
-  success: boolean;
-  message?: string;
-  data?: T;
-  error?: unknown;
-}
-
 async function fetchCampaigns(): Promise<Campaign[]> {
-  const res = await fetchClient(`${API_URL}/campaigns`);
-  if (!res.ok) {
-    throw new Error(`Failed to fetch campaigns: ${res.status}`);
+  const { data, error } = await apiClient.GET('/api/v1/campaigns', {
+    params: { query: { includeArchived: false } },
+  });
+  if (error) {
+    throw new Error((error as { message?: string }).message ?? 'Failed to fetch campaigns');
   }
-
-  const body = (await res.json()) as ApiResponse<Campaign[]>;
-  if (!body.success) {
-    throw new Error(body.message ?? 'Failed to fetch campaigns');
-  }
-
-  return body.data ?? [];
+  const result = data as unknown as { data?: Campaign[] } | Campaign[] | null;
+  if (Array.isArray(result)) return result;
+  return result?.data ?? [];
 }
 
 async function postCampaign(payload: CampaignCreatePayload): Promise<Campaign> {
-  const res = await fetchClient(`${API_URL}/campaigns`, {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify(payload),
+  const { data, error, response } = await apiClient.POST('/api/v1/campaigns', {
+    body: payload as never,
   });
-
-  if (![200, 201].includes(res.status)) {
-    const body = await res.json();
-    throw new Error(body?.message ?? `Failed to create campaign: ${res.status}`);
+  if (error || !response.ok) {
+    throw new Error((error as { message?: string } | undefined)?.message ?? `Failed to create campaign`);
   }
-
-  const body = (await res.json()) as ApiResponse<Campaign>;
-  if (!body.success) {
-    throw new Error(body.message ?? 'Failed to create campaign');
-  }
-
-  return body.data as Campaign;
+  const result = data as unknown as { data?: Campaign } | Campaign | null;
+  return (result && 'data' in result ? result.data : result) as Campaign;
 }
 
 async function patchCampaign(id: string, payload: CampaignUpdatePayload): Promise<Campaign> {
-  const res = await fetchClient(`${API_URL}/campaigns/${id}`, {
-    method: 'PATCH',
-    headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify(payload),
+  const { data, error } = await apiClient.PATCH('/api/v1/campaigns/{id}', {
+    params: { path: { id } },
+    body: payload as never,
   });
-
-  if (!res.ok) {
-    const body = await res.json();
-    throw new Error(body?.message ?? `Failed to update campaign: ${res.status}`);
+  if (error) {
+    throw new Error((error as { message?: string }).message ?? `Failed to update campaign`);
   }
-
-  const body = (await res.json()) as ApiResponse<Campaign>;
-  if (!body.success) {
-    throw new Error(body.message ?? 'Failed to update campaign');
-  }
-
-  return body.data as Campaign;
+  const result = data as unknown as { data?: Campaign } | Campaign | null;
+  return (result && 'data' in result ? result.data : result) as Campaign;
 }
 
 export function useCampaigns() {
@@ -85,7 +57,7 @@ export function useCreateCampaign() {
       return trackJob(
         'Create Campaign',
         `Creating campaign "${payload.name}"`,
-        () => postCampaign(payload)
+        () => postCampaign(payload),
       );
     },
     onSuccess: () => {

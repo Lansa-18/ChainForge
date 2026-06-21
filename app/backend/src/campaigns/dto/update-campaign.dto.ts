@@ -35,6 +35,8 @@ export class UpdateCampaignDto {
   @ApiPropertyOptional({
     description: 'Updated campaign metadata.',
     example: { region: 'Lagos', partner: 'NGO-B' },
+    type: 'object',
+    additionalProperties: true,
   })
   @IsOptional()
   @IsObject()
