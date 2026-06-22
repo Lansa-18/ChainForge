@@ -1,6 +1,10 @@
 const RETRY_DELAYS_MS = [1_000, 2_000, 4_000];
 
 function isRetryable(error: unknown): boolean {
+  if (
+    error instanceof DOMException &&
+    (error.name === 'AbortError' || error.name === 'TimeoutError')
+  ) return false;
   if (error instanceof Response || (error && typeof (error as { status?: number }).status === 'number')) {
     const status = (error as { status: number }).status;
     return status >= 500;

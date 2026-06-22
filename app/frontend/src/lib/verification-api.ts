@@ -1,6 +1,7 @@
 import type { VerificationResult } from '@/types/verification';
 import { withRetry } from '@/lib/retry';
 import { apiClient } from '@/lib/api-client';
+import { isTimeoutError } from '@/lib/fetch-timeout';
 
 export class VerificationApiError extends Error {
   constructor(message: string) {
@@ -25,7 +26,12 @@ export async function startEvidenceVerification(
     );
     data = result.data as VerificationResult | undefined;
     response = result.response;
-  } catch {
+  } catch (error) {
+    if (isTimeoutError(error)) {
+      throw new VerificationApiError(
+        'Request timed out. Please check your connection and try again.',
+      );
+    }
     throw new VerificationApiError(
       'Unable to reach the verification service. Please check your connection and try again.',
     );

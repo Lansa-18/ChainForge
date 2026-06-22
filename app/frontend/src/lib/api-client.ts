@@ -2,6 +2,7 @@ import createClient from 'openapi-fetch';
 import type { paths } from './generated/api';
 import { fetchClient } from './mock-api/client';
 import { apiUrl } from './env';
+import { withTimeoutFetch } from './fetch-timeout';
 
 /**
  * Typed API client for the ChainForge backend.
@@ -14,5 +15,5 @@ import { apiUrl } from './env';
  */
 export const apiClient = createClient<paths>({
   baseUrl: apiUrl,
-  fetch: fetchClient as typeof fetch,
+  fetch: withTimeoutFetch(fetchClient as typeof fetch) as typeof fetch,
 });

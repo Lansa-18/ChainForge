@@ -2,6 +2,7 @@
 
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { apiClient } from '@/lib/api-client';
+import { isTimeoutError } from '@/lib/fetch-timeout';
 import type {
   Campaign,
   CampaignCreatePayload,
@@ -10,38 +11,49 @@ import type {
 import { useActivity } from './useActivity';
 
 async function fetchCampaigns(): Promise<Campaign[]> {
-  const { data, error } = await apiClient.GET('/api/v1/campaigns', {
-    params: { query: { includeArchived: false } },
-  });
-  if (error) {
-    throw new Error((error as { message?: string }).message ?? 'Failed to fetch campaigns');
+  try {
+    const { data, error } = await apiClient.GET('/api/v1/campaigns', {
+      params: { query: { includeArchived: false } },
+    });
+    if (error) throw new Error((error as { message?: string }).message ?? 'Failed to fetch campaigns');
+    const result = data as unknown as { data?: Campaign[] } | Campaign[] | null;
+    if (Array.isArray(result)) return result;
+    return result?.data ?? [];
+  } catch (error) {
+    if (isTimeoutError(error)) throw new Error('Request timed out. Please check your connection and try again.');
+    throw error;
   }
-  const result = data as unknown as { data?: Campaign[] } | Campaign[] | null;
-  if (Array.isArray(result)) return result;
-  return result?.data ?? [];
 }
 
 async function postCampaign(payload: CampaignCreatePayload): Promise<Campaign> {
-  const { data, error, response } = await apiClient.POST('/api/v1/campaigns', {
-    body: payload as never,
-  });
-  if (error || !response.ok) {
-    throw new Error((error as { message?: string } | undefined)?.message ?? `Failed to create campaign`);
+  try {
+    const { data, error, response } = await apiClient.POST('/api/v1/campaigns', {
+      body: payload as never,
+    });
+    if (error || !response.ok) {
+      throw new Error((error as { message?: string } | undefined)?.message ?? 'Failed to create campaign');
+    }
+    const result = data as unknown as { data?: Campaign } | Campaign | null;
+    return (result && 'data' in result ? result.data : result) as Campaign;
+  } catch (error) {
+    if (isTimeoutError(error)) throw new Error('Request timed out. Please check your connection and try again.');
+    throw error;
   }
-  const result = data as unknown as { data?: Campaign } | Campaign | null;
-  return (result && 'data' in result ? result.data : result) as Campaign;
 }
 
 async function patchCampaign(id: string, payload: CampaignUpdatePayload): Promise<Campaign> {
-  const { data, error } = await apiClient.PATCH('/api/v1/campaigns/{id}', {
-    params: { path: { id } },
-    body: payload as never,
-  });
-  if (error) {
-    throw new Error((error as { message?: string }).message ?? `Failed to update campaign`);
+  try {
+    const { data, error } = await apiClient.PATCH('/api/v1/campaigns/{id}', {
+      params: { path: { id } },
+      body: payload as never,
+    });
+    if (error) throw new Error((error as { message?: string }).message ?? 'Failed to update campaign');
+    const result = data as unknown as { data?: Campaign } | Campaign | null;
+    return (result && 'data' in result ? result.data : result) as Campaign;
+  } catch (error) {
+    if (isTimeoutError(error)) throw new Error('Request timed out. Please check your connection and try again.');
+    throw error;
   }
-  const result = data as unknown as { data?: Campaign } | Campaign | null;
-  return (result && 'data' in result ? result.data : result) as Campaign;
 }
 
 export function useCampaigns() {
