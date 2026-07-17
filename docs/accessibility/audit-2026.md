@@ -24,8 +24,9 @@ verified automatically here and need a browser-based pass (see ticket backlog):
   component, currently rendering mock data). This audit covers `/claim-receipt`
   in its place (maintainer-confirmed). Creating a real `/claims/[id]` route with
   API wiring is listed as a ticket below.
-- Locale routing (`/[locale]/`, en/es/fr via next-intl) exists, but the audited
-  pages render **hardcoded English copy** and do not call translation hooks.
+- Locale routing (`/[locale]/`, en/es/fr/fr-CA/pt-BR/sw via next-intl) exists,
+  but the audited pages render **hardcoded English copy** and do not call
+  translation hooks.
   Related: the root layout hardcodes `<html lang="en">` for every locale.
 
 ## Per-page results
