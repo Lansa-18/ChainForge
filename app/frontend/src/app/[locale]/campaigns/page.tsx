@@ -1,7 +1,7 @@
 'use client';
 
 import Link from 'next/link';
-import { useMemo, useState, useCallback } from 'react';
+import { useMemo, useState, useCallback, useRef, useEffect } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
 import { AppEmptyState } from '@/components/empty-state/AppEmptyState';
 import { ExportControls } from '@/components/dashboard/ExportControls';
@@ -58,10 +58,10 @@ export default function CampaignsPage() {
     kind: 'success' | 'error';
   } | null>(null);
 
-  const previousCampaignsRef = React.useRef(campaigns);
+  const previousCampaignsRef = useRef(campaigns);
   const [announcement, setAnnouncement] = useState('');
 
-  React.useEffect(() => {
+  useEffect(() => {
     if (campaigns.length > 0 && previousCampaignsRef.current.length > 0) {
       for (const campaign of campaigns) {
         const prev = previousCampaignsRef.current.find(c => c.id === campaign.id);
