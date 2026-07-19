@@ -13,6 +13,8 @@ import {
   getUserRole,
   getUserRoleLabel,
 } from '@/lib/user-role';
+import { LiveRegion } from '@/components/LiveRegion';
+import { getStatusTransitionMessage } from '@/lib/status-messages';
 import type { CampaignStatus } from '@/types/campaign';
 
 const statusStyles: Record<CampaignStatus, string> = {
@@ -55,6 +57,21 @@ export default function CampaignsPage() {
     text: string;
     kind: 'success' | 'error';
   } | null>(null);
+
+  const previousCampaignsRef = React.useRef(campaigns);
+  const [announcement, setAnnouncement] = useState('');
+
+  React.useEffect(() => {
+    if (campaigns.length > 0 && previousCampaignsRef.current.length > 0) {
+      for (const campaign of campaigns) {
+        const prev = previousCampaignsRef.current.find(c => c.id === campaign.id);
+        if (prev && prev.status !== campaign.status) {
+          setAnnouncement(getStatusTransitionMessage('Campaign', prev.status, campaign.status));
+        }
+      }
+    }
+    previousCampaignsRef.current = campaigns;
+  }, [campaigns]);
 
   function updateParam(key: string, value: string) {
     const params = new URLSearchParams(searchParams.toString());
@@ -159,6 +176,7 @@ export default function CampaignsPage() {
 
   return (
     <div className="min-h-screen bg-linear-to-b from-background to-gray-50 p-6 dark:to-gray-950">
+      <LiveRegion message={announcement} />
       <main className="container mx-auto space-y-8">
         <div className="flex flex-wrap items-center justify-between gap-3">
           <h1 className="text-4xl font-bold">NGO Campaigns</h1>
